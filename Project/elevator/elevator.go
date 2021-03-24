@@ -1,8 +1,14 @@
 package elevator
 
 import (
-	"elevio"
+	"Project/elevio"
 )
+
+const NumFloors = 4
+
+const NumButtons = 3
+
+const DoorOpenDuration = 3
 
 type Behaviour int
 
@@ -13,18 +19,26 @@ const (
 )
 
 type Elevator struct {
-	floor     int
-	dir       elevio.MotorDirection
-	requests  [][]bool
-	behaviour Behaviour
+	Floor    int
+	Dir      elevio.MotorDirection
+	Requests [][]bool
+	Behave   Behaviour
 }
 
 func InitElev(numFloors int, numButtons int) Elevator {
-	elev := Elevator{floor: 0, dir: elevio.MD_Stop, requests: make([][]bool, numFloors), behaviour: Idle}
+	elev := Elevator{Floor: 0, Dir: elevio.MD_Up, Requests: make([][]bool, numFloors), Behave: Moving}
 
-	for r := range elev.requests {
-		elev.requests[r] = make([]bool, numButtons)
+	for r := range elev.Requests {
+		elev.Requests[r] = make([]bool, numButtons)
 	}
-
 	return elev
+}
+
+func LightsElev(e Elevator) {
+	elevio.SetFloorIndicator(e.Floor)
+	for f := range e.Requests {
+		for r := range e.Requests[f] {
+			elevio.SetButtonLamp(elevio.ButtonType(r), f, e.Requests[f][r])
+		}
+	}
 }

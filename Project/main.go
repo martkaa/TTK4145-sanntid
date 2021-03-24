@@ -3,28 +3,27 @@ package main
 import (
 	"fmt"
 
-	"/Users/emilhaugstvedt/Desktop/NTNU/Sanntid/ElevatorProject/Project/elevio"
-
-	"/Users/emilhaugstvedt/Desktop/NTNU/Sanntid/ElevatorProject/Project/elevator"
+	"Project/elevator"
+	"Project/elevio"
+	"Project/fsm"
 )
-
-const numFloors = 4
-
-const numButtons = 3
 
 func main() {
 
-	elev := elevator.InitElev(numFloors, numButtons)
+	elev := elevator.InitElev(elevator.NumFloors, elevator.NumButtons)
 
-	elevio.Init("localhost:12333", numFloors)
+	e := &elev
 
-	var d elevio.MotorDirection = elevio.MD_Up
-	//elevio.SetMotorDirection(d)
+	elevio.Init("localhost:12345", elevator.NumFloors)
+
+	//elevio.SetMotorDirection(e.Dir)
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
+
+	timerChan := make(chan bool)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
@@ -32,38 +31,34 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	for {
+		fmt.Println(e.Behave)
+		elevator.LightsElev(*e)
 		select {
 		case a := <-drv_buttons:
 			fmt.Printf("%+v\n", a)
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
-			elev.requests[a.Floor][a.Button] = true
-			fmt.Println(elev.requests)
+			fsm.FsmOnRequestButtonPress(a.Floor, a.Button, e, timerChan)
 
-		case a := <-drv_floors:
-			fmt.Printf("%+v\n", a)
-			if a == numFloors-1 {
-				d = elevio.MD_Down
-			} else if a == 0 {
-				d = elevio.MD_Up
-			}
-			elevio.SetMotorDirection(d)
-			request.requestClearAtCurrentFloor(a, &elev)
+		case f := <-drv_floors:
+			e.Floor = f
+			fsm.FsmOnFloorArrival(e, timerChan)
 
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			} else {
-				elevio.SetMotorDirection(d)
+				elevio.SetMotorDirection(e.Dir)
 			}
 
 		case a := <-drv_stop:
 			fmt.Printf("%+v\n", a)
-			for f := 0; f < numFloors; f++ {
+			for f := 0; f < elevator.NumFloors; f++ {
 				for b := elevio.ButtonType(0); b < 3; b++ {
 					elevio.SetButtonLamp(b, f, false)
 				}
 			}
+		case <-timerChan:
+			fsm.FsmOnDoorTimeout(e)
 		}
 	}
 }
