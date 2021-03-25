@@ -16,7 +16,7 @@ func FsmOnFloorArrival(e *elevator.Elevator, timerChan chan<- bool) {
 			elevator.LightsElev(*e)
 			request.RequestClearAtCurrentFloor(e)
 			elevio.SetDoorOpenLamp(true)
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan)
+			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
 			e.Behave = elevator.DoorOpen
 		}
 	default:
@@ -28,7 +28,7 @@ func FsmOnDoorTimeout(e *elevator.Elevator) {
 	switch {
 	case e.Behave == elevator.DoorOpen:
 		request.RequestChooseDirection(e)
-
+		elevio.SetMotorDirection(e.Dir)
 		elevio.SetDoorOpenLamp(false)
 
 		if e.Dir == elevio.MD_Stop {
@@ -45,7 +45,7 @@ func FsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 	switch {
 	case e.Behave == elevator.DoorOpen:
 		if e.Floor == btnFloor {
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan)
+			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
 		} else {
 			e.Requests[btnFloor][int(btnType)] = true
 		}
@@ -55,13 +55,15 @@ func FsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 		if e.Floor == btnFloor {
 			elevator.LightsElev(*e)
 			elevio.SetDoorOpenLamp(true)
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan)
+			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
 			e.Behave = elevator.DoorOpen
+			break
 		} else {
 			e.Requests[btnFloor][int(btnType)] = true
 			request.RequestChooseDirection(e)
 			elevio.SetMotorDirection(e.Dir)
 			e.Behave = elevator.Moving
+			break
 		}
 	}
 }

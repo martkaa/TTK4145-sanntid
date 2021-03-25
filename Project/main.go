@@ -6,6 +6,7 @@ import (
 	"Project/elevator"
 	"Project/elevio"
 	"Project/fsm"
+	"Project/request"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 
 	e := &elev
 
-	elevio.Init("localhost:12345", elevator.NumFloors)
+	elevio.Init("localhost:23456", elevator.NumFloors)
 
 	//elevio.SetMotorDirection(e.Dir)
 
@@ -31,7 +32,7 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	for {
-		fmt.Println(e.Behave)
+		fmt.Println(elevator.Behaviour(e.Behave))
 		elevator.LightsElev(*e)
 		select {
 		case a := <-drv_buttons:
@@ -52,13 +53,18 @@ func main() {
 
 		case a := <-drv_stop:
 			fmt.Printf("%+v\n", a)
-			for f := 0; f < elevator.NumFloors; f++ {
-				for b := elevio.ButtonType(0); b < 3; b++ {
-					elevio.SetButtonLamp(b, f, false)
-				}
-			}
+			request.RequestClearAll(e)
+			e.Dir = elevio.MD_Stop
+			e.Behave = elevator.Idle
+			elevio.SetMotorDirection(e.Dir)
+			elevio.SetDoorOpenLamp(false)
+			elevator.LightsElev(*e)
+
 		case <-timerChan:
-			fsm.FsmOnDoorTimeout(e)
+			e.TimerCount -= 1
+			if e.TimerCount == 0 {
+				fsm.FsmOnDoorTimeout(e)
+			}
 		}
 	}
 }

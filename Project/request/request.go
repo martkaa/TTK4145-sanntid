@@ -65,6 +65,7 @@ func RequestChooseDirection(e *elevator.Elevator) {
 			e.Dir = elevio.MD_Stop
 		}
 	case elevio.MD_Down:
+		fallthrough
 	case elevio.MD_Stop:
 		if RequestsBelow(e) {
 			e.Dir = elevio.MD_Down
@@ -76,4 +77,12 @@ func RequestChooseDirection(e *elevator.Elevator) {
 
 	}
 
+}
+
+func RequestClearAll(e *elevator.Elevator) {
+	for f := 0; f < elevator.NumFloors; f++ {
+		for btn := 0; btn < elevator.NumButtons; btn++ {
+			e.Requests[f][btn] = false
+		}
+	}
 }
