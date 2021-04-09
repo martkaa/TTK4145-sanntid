@@ -19,6 +19,7 @@ const (
 )
 
 type Elevator struct {
+	Id         int
 	Floor      int
 	Dir        elevio.MotorDirection
 	Requests   [][]bool
@@ -27,7 +28,7 @@ type Elevator struct {
 }
 
 func InitElev(numFloors int, numButtons int) Elevator {
-	elev := Elevator{Floor: 0, Dir: elevio.MD_Down, Requests: make([][]bool, numFloors), Behave: Idle, TimerCount: 0}
+	elev := Elevator{Id: 0, Floor: 0, Dir: elevio.MD_Down, Requests: make([][]bool, numFloors), Behave: Idle, TimerCount: 0}
 
 	for r := range elev.Requests {
 		elev.Requests[r] = make([]bool, numButtons)

@@ -4,14 +4,17 @@ import (
 	"Project/distributor"
 	"Project/elevator"
 	"Project/elevio"
+	"Project/request"
 )
+
+const TRAVEL_TIME = 10
 
 const NumElevators = 4
 
 // Returnerer heis med lavest kost basert på et straffesystem/poeng
 // Må deretter sorteres og delegeres
 
-func costCalculator(request distributor.Request, elevList [NumElevators]elevator.Elevator, id int, onlineList [NumElevators]bool) int {
+func CostCalculator(request distributor.Request, elevList [NumElevators]elevator.Elevator, onlineList [NumElevators]bool) int {
 	if request.Btn == elevio.BT_Cab {
 		return id
 	}
@@ -53,7 +56,7 @@ func costCalculator(request distributor.Request, elevList [NumElevators]elevator
 	return bestElevator
 }
 
-func distrubute() {
+/*func distrubute() {
 	var (
 		elevList       [NumElevators]elevator.Elevator
 		onlineList     [NumElevators]bool
@@ -62,4 +65,41 @@ func distrubute() {
 	completedOrder.DesignatedElevator = id
 	elevList[id] = <-elevatorCh
 	updateSyncCh <- elevList
+}*/
+
+func TimeToServeRequest(e_old elevator.Elevator, r distributor.Request) int {
+	e := e_old
+	e.Requests[r.Floor][r.Btn] = true
+
+	arrivedAtRequest := false
+
+	duration := 0
+
+	switch e.Behave {
+	case elevator.Idle:
+		request.RequestChooseDirection(&e)
+		if e.Dir == elevio.MD_Stop {
+			return duration
+		}
+	case elevator.Moving:
+		duration += TRAVEL_TIME / 2
+		e.Floor += int(e.Dir)
+		break
+	case elevator.DoorOpen:
+		duration -= elevator.DoorOpenDuration / 2
+	}
+
+	for {
+		if request.RequestShouldStop(&e) {
+			request.RequestClearAtCurrentFloor(&e)
+			if arrivedAtRequest {
+				return duration
+			}
+			duration += elevator.DoorOpenDuration
+			request.RequestChooseDirection(&e)
+		}
+		e.Floor += int(e.Dir)
+		duration += TRAVEL_TIME
+	}
+
 }

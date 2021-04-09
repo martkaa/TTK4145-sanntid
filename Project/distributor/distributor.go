@@ -1,6 +1,7 @@
 package distributor
 
 import (
+	"Project/cost"
 	"Project/elevator"
 	"Project/elevio"
 )
@@ -14,11 +15,10 @@ type DistributorElevator struct {
 }
 
 type Request struct {
-	Floor int
-	btn   elevio.ButtonType
-	// idé å inkludere dette:?
-	// DesignatedElev	int
-	// Done				bool
+	Floor            int
+	Btn              elevio.ButtonType
+	DesignatedElevID int
+	Done             bool
 }
 
 func Distributor(elevatorChannel chan<- chan Request) {
@@ -41,8 +41,8 @@ func Distributor(elevatorChannel chan<- chan Request) {
 				}
 				elevators = append(elevators, newElevator)
 			}
-		case floor, btn := <-newInternalRequest:
-			//Start go routine that calculates which elevator to execute the request
+		case r := <-newInternalRequest:
+			go cost.CostCalculator()
 		case elevatorChannel <- assignedRequest:
 		}
 
