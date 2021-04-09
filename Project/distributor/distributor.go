@@ -16,6 +16,9 @@ type DistributorElevator struct {
 type Request struct {
 	Floor int
 	btn   elevio.ButtonType
+	// idé å inkludere dette:?
+	// DesignatedElev	int
+	// Done				bool
 }
 
 func Distributor(elevatorChannel chan<- chan Request) {
