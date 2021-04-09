@@ -6,14 +6,6 @@ import (
 	"Project/elevio"
 )
 
-type DistributorElevator struct {
-	Id       int
-	Floor    int
-	Dir      elevio.MotorDirection
-	Requests [][]bool
-	Behave   elevator.Behaviour
-}
-
 type Request struct {
 	Floor            int
 	Btn              elevio.ButtonType
@@ -23,9 +15,9 @@ type Request struct {
 
 func Distributor(elevatorChannel chan<- chan Request) {
 
-	elevators := make([]DistributorElevator, 0)
+	elevators := make([]elevator.Elevator, 0)
 
-	elevatorUpdate := make(chan DistributorElevator)
+	elevatorUpdate := make(chan elevator.Elevator)
 	newInternalRequest := make(chan Request)
 	assignedRequest := make(chan Request)
 
@@ -42,7 +34,7 @@ func Distributor(elevatorChannel chan<- chan Request) {
 				elevators = append(elevators, newElevator)
 			}
 		case r := <-newInternalRequest:
-			go cost.CostCalculator()
+			go cost.CostCalculator(r, elevators)
 		case elevatorChannel <- assignedRequest:
 		}
 
