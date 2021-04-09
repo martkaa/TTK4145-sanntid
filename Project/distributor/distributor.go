@@ -40,3 +40,35 @@ func Distributor(elevatorChannel chan<- chan Request) {
 
 	}
 }
+
+
+
+func TimeToIdle(elev Elevator) {
+    duration := 0;
+    select {
+    case elev.behaviour == Idle:
+        elev.Dir = requests_chooseDirection(elev);
+        if elev.Dir == D_Stop {
+            return duration
+        }
+        break
+    case elev.behaviour == Moving:
+        duration = duration + TRAVEL_TIME/2
+        elev.Floor = elev.Floor + elev.Dir
+        break
+    case elev.behaviour == DoorOpen:
+        duration = duration - DOOR_OPEN_TIME/2
+    }
+    for{
+        if requests_shouldStop(elev){
+            elev = requests_clearAtCurrentFloor(elev, NULL)
+            duration = duration + DOOR_OPEN_TIME
+            elev.Dir = requests_chooseDirection(elev)
+            if elev.Dir == D_Stop {
+                return duration
+            }
+        }
+        elev.Floor = elev.Floor + elev.direction
+        duration = duration += TRAVEL_TIME
+    }
+}
