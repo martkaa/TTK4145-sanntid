@@ -1,7 +1,6 @@
 package cost
 
 import (
-	"Project/distributor"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/request"
@@ -13,6 +12,22 @@ const NumElevators = 4
 
 // Returnerer heis med lavest kost basert på et straffesystem/poeng
 // Må deretter sorteres og delegeres
+
+func Cost(elevators []elevator.Elevator, r distributor.Request, assignedDistributorOrder chan  destributor.DestributorOrder)  {
+
+	minElev := elevators[0]
+	minCost := 999999
+
+	for _,e := range elevators {
+		elevCost := TimeToServeRequest(e, r)
+		if (elevCost < minCost) {
+			minElev = e
+			minCost = elevCost
+		}
+	}
+	minElev.Requests[r.Floor][r.Btn] = distributor.Comfirmed
+	assignedElevator <- distributor.DistributorOrder{E: minElev, R: r}
+}
 
 func CostCalculator(request distributor.Request, elevList [NumElevators]elevator.Elevator, onlineList [NumElevators]bool) int {
 	if request.Btn == elevio.BT_Cab {
