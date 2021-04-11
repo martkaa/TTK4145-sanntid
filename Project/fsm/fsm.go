@@ -1,7 +1,6 @@
 package fsm
 
 import (
-	"Project/distributor"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/request"
@@ -9,7 +8,7 @@ import (
 	"fmt"
 )
 
-func Fsm(orderChan chan distributor.Request, elevatorState chan<- elevator.Elevator) {
+func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behaviour) {
 	elev := elevator.InitElev(elevator.NumFloors, elevator.NumButtons)
 
 	e := &elev
@@ -29,11 +28,15 @@ func Fsm(orderChan chan distributor.Request, elevatorState chan<- elevator.Eleva
 	for {
 		fmt.Println(elevator.Behaviour(e.Behave))
 		elevator.LightsElev(*e)
-		select {
-		case a := <-orderChan:
-			fmt.Printf("%+v\n", a)
-			fsmOnRequestButtonPress(a.Floor, a.Btn, e, timerChan)
 
+		elevatorState <- e.Behave // Sende state til distributor, usikker på hvor ofte vi trenger å gjøre det.
+
+		select {
+		case r := <-orderChan: // Mottar ny bestilling fra distributor
+			fmt.Printf("%+v\n", r)
+			fsmOnRequestButtonPress(r.Floor, r.Button, e, timerChan)
+
+		// Alt under her er bare avhengig av heisens interne ting
 		case f := <-drv_floors:
 			e.Floor = f
 			fsmOnFloorArrival(e, timerChan)

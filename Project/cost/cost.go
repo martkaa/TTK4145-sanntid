@@ -1,7 +1,7 @@
 package cost
 
 import (
-	"Project/elevator"
+	"Project/distributor"
 	"Project/elevio"
 	"Project/request"
 )
@@ -13,7 +13,7 @@ const NumElevators = 4
 // Returnerer heis med lavest kost basert på et straffesystem/poeng
 // Må deretter sorteres og delegeres
 
-func Cost(elevators []elevator.Elevator, r distributor.Request, assignedDistributorOrder chan  destributor.DestributorOrder)  {
+func Cost(elevators []distributor.DistributorElevators, r distributor.Request, assignedDistributorOrder chan  destributor.DestributorOrder)  {
 
 	minElev := elevators[0]
 	minCost := 999999
