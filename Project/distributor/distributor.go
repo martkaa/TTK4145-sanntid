@@ -162,3 +162,13 @@ func distributorRequestsToElevatorRequest(distributorRequests [elevator.NumFloor
 	}
 	return elevatorRequests
 }
+
+/* Function converting from CommunicationElevator to DistributorElevator */
+func communicationElevatorToDistributorElevator(c communication.CommunicationElevator) DistributorElevator {
+	return DistributorElevator{
+		Id:       c.Id,
+		Floor:    c.Floor,
+		Dir:      c.Dir,
+		Requests: RequestState(c.Requests),
+		Behave:   c.behave}
+}
