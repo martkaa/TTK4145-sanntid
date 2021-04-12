@@ -29,7 +29,7 @@ type DistributorElevator struct {
 	Id       int
 	Floor    int
 	Dir      elevio.MotorDirection
-	Requests [][]RequestState
+	Requests [elevator.NumFloors][elevator.NumButtons]RequestState
 	Behave   elevator.Behaviour
 }
 
@@ -39,7 +39,7 @@ type DistributorOrder struct {
 	Req  elevio.ButtonEvent
 }
 
-func DistributorFsm(internalStateChan chan elevator.Behaviour, internalOrderChan chan elevio.ButtonEvent) {
+func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrderChan chan elevio.ButtonEvent) {
 
 	/*
 		Communication stuff
@@ -78,12 +78,12 @@ func DistributorFsm(internalStateChan chan elevator.Behaviour, internalOrderChan
 			distributorUpdate(elevators, updatedElevators)
 
 		case r := <-ch_newInternalRequest:
-			// Konvertere alle elevators til CostElevators.
-			go cost.Cost(elevators, r, ch_assignedDistributorOrder)
+			costElevators := distributorElevatorsToCostElevators(elevators, r) /* Converting from DistributorElevatosr to CostElevators */
+			go cost.Cost(costElevators, r, ch_assignedDistributorOrder)
 
-		case D := <-ch_assignedDistributorOrder:
+		case costElevator := <-ch_assignedDistributorOrder:
 			// Konvertere fra elevator til distributorElevator
-			distributorOrderAssigned(D, ch_localChan)
+			updateDistributorElevators(elevators, costElevator)
 
 		case newBehaviour := <-ch_internalStateChan:
 			distributorUpdateInternalState(elevators, newBehaviour)
@@ -120,4 +120,45 @@ func distributorUpdateInternalState(elevators []*DistributorElevator, updatedBeh
 		return
 	}
 	elevators[0].Behave = updatedBehaviour
+}
+
+/* Updating the DistributorElevators according to elevator assigned from Cost-function */
+
+func updateDistributorElevators(elevators []*DistributorElevator, costElevator cost.CostElevator) {
+	for _, e := range elevators {
+		if e.Id == costElevator.Id {
+			e.Requests[costElevator.Req.Floor][costElevator.Req.Button] = Comfirmed
+		}
+	}
+}
+
+/* Convert from distributorElevator to CostElevators befor sending to Cost-module*/
+
+func distributorElevatorsToCostElevators(elevators []*DistributorElevator, r elevio.ButtonEvent) []cost.CostElevator {
+	var costElevators []cost.CostElevator
+	for _, e := range elevators {
+		elevator := elevator.Elevator{
+			Floor:    e.Floor,
+			Dir:      e.Dir,
+			Requests: distributorRequestsToElevatorRequest(e.Requests),
+			Behave:   e.Behave,
+		}
+		costElevators = append(costElevators, cost.CostElevator{
+			Id:   e.Id,
+			Elev: elevator,
+			Req:  r})
+	}
+	return costElevators
+}
+
+func distributorRequestsToElevatorRequest(distributorRequests [elevator.NumFloors][elevator.NumButtons]RequestState) [elevator.NumFloors][elevator.NumButtons]bool {
+	var elevatorRequests [elevator.NumFloors][elevator.NumButtons]bool
+	for floor := range distributorRequests {
+		for button := range distributorRequests[floor] {
+			if distributorRequests[floor][button] == Comfirmed {
+				elevatorRequests[floor][button] = true
+			}
+		}
+	}
+	return elevatorRequests
 }

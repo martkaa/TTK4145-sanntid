@@ -21,7 +21,7 @@ const (
 type Elevator struct {
 	Floor      int
 	Dir        elevio.MotorDirection
-	Requests   [][]bool
+	Requests   [NumFloors][NumButtons]bool
 	Behave     Behaviour
 	TimerCount int
 }
