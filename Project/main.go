@@ -12,10 +12,10 @@ func main() {
 	// Tenker at main blir den delen som "binder" sammen de forskjellige delene ved å lage forskjellige
 	// kanaler og sende de inn i forskjellige go-rutiner.
 
-	internalOrderChan := make(chan elevio.ButtonEvent) //Channel for new internal orders
-	internalStateChan := make(chan elevator.Behaviour) //Channel for internal state
+	ch_internalOrderChan := make(chan elevio.ButtonEvent) //Channel for new internal orders
+	ch_internalStateChan := make(chan elevator.Behaviour) //Channel for internal state
 
-	go fsm.Fsm(internalOrderChan, internalStateChan)
-	go distributor.DistributorFsm(internalStateChan, internalOrderChan)
+	go fsm.Fsm(ch_internalOrderChan, ch_internalStateChan)
+	go distributor.DistributorFsm(ch_internalStateChan, ch_internalOrderChan)
 
 }

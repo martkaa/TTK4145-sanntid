@@ -1,5 +1,6 @@
 
 Convention
+-----------
 
 - Channels: start with ch_ followed by camel case. E.g. ch_thisIsAChannel
 

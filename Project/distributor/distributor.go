@@ -1,9 +1,11 @@
 package distributor
 
 import (
+	"Project/communication"
 	"Project/cost"
 	"Project/elevator"
 	"Project/elevio"
+	"Project/network/peers"
 )
 
 /* Set id from command line using 'go run main.go -id=our_id'*/
@@ -44,16 +46,16 @@ func DistributorFsm(internalStateChan chan elevator.Behaviour, internalOrderChan
 	*/
 
 	/* Channels for sending and receiving elevator struct*/
-	ch_receive := make(chan distributor.DistributorElevator)
-	ch_transmit := make(chan distributor.DistributorElevator)
+	ch_receive := make(chan peers.PeerUpdate)
+	ch_transmit := make(chan DistributorElevator)
 
 	/* We can disable/enable the transmitter after it has been started.*/
 	/* This could be used to signal that we are somehow "unavailable".*/
 	ch_peerTxEnable := make(chan bool)
-	peerUpdateCh := make(chan peers.PeerUpdate)
+	ch_peerUpdate := make(chan peers.PeerUpdate)
 
-	go communication.communicationInit(ch_receive, ch_transmit)
-	go communication.peerUpdateInit(ch_receive, ch_peerTxEnable)
+	go communication.CommunicationInit(ch_receive, ch_transmit)
+	go communication.PeerUpdateInit(ch_receive, ch_peerTxEnable)
 
 	/**/
 
@@ -62,35 +64,37 @@ func DistributorFsm(internalStateChan chan elevator.Behaviour, internalOrderChan
 	elevators := e
 
 	/* Channel for triggers in fsm*/
-	elevatorsUpdate := make(chan []DistributorElevator)
-	newInternalRequest := make(chan elevio.ButtonEvent)
-	assignedDistributorOrder := make(chan DistributorOrder) // Kanal for å motta bestilling fra Cost
-	localChan := make(chan elevio.ButtonEvent)
+	ch_elevatorsUpdate := make(chan []DistributorElevator)
+	ch_newInternalRequest := make(chan elevio.ButtonEvent)
+	ch_assignedDistributorOrder := make(chan cost.CostElevator) /* Channel for receiving assigned order from Cost */
+	ch_localChan := make(chan elevio.ButtonEvent)
 
-	go elevio.PollButtons(newInternalRequest) // Innhenter nye lokale bestillinger fra elevio.
+	go elevio.PollButtons(ch_newInternalRequest) /* Channel for receiving new local orders */
 
 	for {
 		select {
 
-		case updatedElevators := <-elevatorsUpdate:
+		case updatedElevators := <-ch_elevatorsUpdate:
 			distributorUpdate(elevators, updatedElevators)
 
-		case r := <-newInternalRequest:
-			go cost.Cost(elevators, r, assignedDistributorOrder)
+		case r := <-ch_newInternalRequest:
+			// Konvertere alle elevators til CostElevators.
+			go cost.Cost(elevators, r, ch_assignedDistributorOrder)
 
-		case D := <-assignedDistributorOrder:
-			distributorOrderAssigned(D, localChan)
+		case D := <-ch_assignedDistributorOrder:
+			// Konvertere fra elevator til distributorElevator
+			distributorOrderAssigned(D, ch_localChan)
 
-		case newBehaviour := <-internalStateChan:
+		case newBehaviour := <-ch_internalStateChan:
 			distributorUpdateInternalState(elevators, newBehaviour)
 		}
 	}
 }
 
-func distributorOrderAssigned(D DistributorOrder, localChan chan<- elevio.ButtonEvent) {
+func distributorOrderAssigned(D DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
 	if D.Elev.Id == localId {
 		D.Elev.Requests[D.Req.Floor][D.Req.Button] = Comfirmed
-		localChan <- D.Req //Fantastisk syntaks her!
+		ch_localChan <- D.Req /* Take a look at this syntaks! */
 	}
 	/*else {
 		Send to network

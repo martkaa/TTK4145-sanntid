@@ -1,9 +1,9 @@
 package communication
 
 import (
-	"../distributor"
-	"../network/bcast"
-	"../network/peers"
+	"Project/distributor"
+	"Project/network/bcast"
+	"Project/network/peers"
 )
 
 /*
@@ -27,7 +27,7 @@ Elevator struct on the network can be read from channel ch_receive.
 Note that all members we want to transmit must be public. Any private members will be received as zero-values.
 */
 
-func communicationInit(ch_receive chan<- distributor.DistributorElevator, ch_transmit chan<- distributor.DistributorElevator) {
+func CommunicationInit(ch_receive chan<- distributor.DistributorElevator, ch_transmit chan<- distributor.DistributorElevator) {
 
 	/* Start the transmitter/receiver pair on some port*/
 	go bcast.Transmitter(16569, ch_receive)
@@ -35,7 +35,7 @@ func communicationInit(ch_receive chan<- distributor.DistributorElevator, ch_tra
 
 }
 
-func peerUpdateInit(ch_peerUpdate chan<- peers.PeerUpdate, ch_peerTxEnable chan<- bool) {
+func PeerUpdateInit(ch_peerUpdate chan<- peers.PeerUpdate, ch_peerTxEnable chan<- bool) {
 
 	/* Start the transmitter/receiver pair on some port*/
 	go peers.Transmitter(15647, distributor.id, ch_peerTxEnable)

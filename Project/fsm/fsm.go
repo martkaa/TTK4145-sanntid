@@ -15,11 +15,11 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 
 	elevio.Init("localhost:23456", elevator.NumFloors)
 
-	drv_floors := make(chan int)
-	drv_obstr := make(chan bool)
-	drv_stop := make(chan bool)
+	ch_arrivedAtFloors := make(chan int)
+	ch_osbstr := make(chan bool)
+	ch_stopButton := make(chan bool)
 
-	timerChan := make(chan bool)
+	ch_timer := make(chan bool)
 
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
@@ -34,14 +34,14 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 		select {
 		case r := <-orderChan: // Mottar ny bestilling fra distributor
 			fmt.Printf("%+v\n", r)
-			fsmOnRequestButtonPress(r.Floor, r.Button, e, timerChan)
+			fsmOnRequestButtonPress(r.Floor, r.Button, e, ch_timer)
 
 		// Alt under her er bare avhengig av heisens interne ting
-		case f := <-drv_floors:
+		case f := <-ch_arrivedAtFloors:
 			e.Floor = f
-			fsmOnFloorArrival(e, timerChan)
+			fsmOnFloorArrival(e, ch_timer)
 
-		case a := <-drv_obstr:
+		case a := <-ch_osbstr:
 			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
@@ -49,7 +49,7 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 				elevio.SetMotorDirection(e.Dir)
 			}
 
-		case a := <-drv_stop:
+		case a := <-ch_stopButton:
 			fmt.Printf("%+v\n", a)
 			request.RequestClearAll(e)
 			e.Dir = elevio.MD_Stop
@@ -58,7 +58,7 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 			elevio.SetDoorOpenLamp(false)
 			elevator.LightsElev(*e)
 
-		case <-timerChan:
+		case <-ch_timer:
 			e.TimerCount -= 1
 			if e.TimerCount == 0 {
 				fsmOnDoorTimeout(e)
@@ -67,7 +67,7 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 	}
 }
 
-func fsmOnFloorArrival(e *elevator.Elevator, timerChan chan<- bool) {
+func fsmOnFloorArrival(e *elevator.Elevator, ch_timer chan<- bool) {
 
 	switch {
 	case e.Behave == elevator.Moving:
@@ -76,7 +76,7 @@ func fsmOnFloorArrival(e *elevator.Elevator, timerChan chan<- bool) {
 			elevator.LightsElev(*e)
 			request.RequestClearAtCurrentFloor(e)
 			elevio.SetDoorOpenLamp(true)
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
+			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
 			e.Behave = elevator.DoorOpen
 		}
 	default:
@@ -101,11 +101,11 @@ func fsmOnDoorTimeout(e *elevator.Elevator) {
 	}
 }
 
-func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevator.Elevator, timerChan chan<- bool) {
+func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevator.Elevator, ch_timer chan<- bool) {
 	switch {
 	case e.Behave == elevator.DoorOpen:
 		if e.Floor == btnFloor {
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
+			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
 		} else {
 			e.Requests[btnFloor][int(btnType)] = true
 		}
@@ -115,7 +115,7 @@ func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 		if e.Floor == btnFloor {
 			elevator.LightsElev(*e)
 			elevio.SetDoorOpenLamp(true)
-			go timer.TimerDoor(elevator.DoorOpenDuration, timerChan, e)
+			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
 			e.Behave = elevator.DoorOpen
 			break
 		} else {
