@@ -14,25 +14,26 @@ type Behaviour int
 
 const (
 	Idle     Behaviour = 0
-	DoorOpen           = 1
-	Moving             = 2
+	DoorOpen Behaviour = 1
+	Moving   Behaviour = 2
 )
 
 type Elevator struct {
 	Floor      int
 	Dir        elevio.MotorDirection
-	Requests   [NumFloors][NumButtons]bool
+	Requests   [elevator.NumFloors][elevator.NumButtons]bool
 	Behave     Behaviour
 	TimerCount int
 }
 
-func InitElev(numFloors int, numButtons int) Elevator {
-	elev := Elevator{Floor: 0, Dir: elevio.MD_Down, Requests: make([][]bool, numFloors), Behave: Idle, TimerCount: 0}
-
-	for r := range elev.Requests {
-		elev.Requests[r] = make([]bool, numButtons)
+func InitElev() Elevator {
+	var requests [NumFloors][NumButtons]bool
+	for floor := range requests {
+		for button := range requests[floor] {
+			requests[floor][button] = false
+		}
 	}
-	return elev
+	return Elevator{Requests: requests}
 }
 
 func LightsElev(e Elevator) {
