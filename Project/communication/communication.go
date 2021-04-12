@@ -4,8 +4,6 @@ import (
 	"../distributor"
 	"../network/bcast"
 	"../network/peers"
-
-	"flag"
 )
 
 /*
@@ -17,23 +15,19 @@ import (
 */
 
 /*
-The elevator struct can be sent over the network by writing to channel ch_transmitter. Elevator struct on the network can be read from channel ch_receive.
+Interface of communication module are channels; ch_transmit, ch_receive, ch_peer_updateCh
+*/
+
+/*
+The elevator struct can be sent over the network by writing to channel ch_transmit.
+Elevator struct on the network can be read from channel ch_receive.
 */
 
 /*
 Note that all members we want to transmit must be public. Any private members will be received as zero-values.
 */
 
-func communicationInit() {
-
-	/* Set id from command line using 'go run main.go -id=our_id'*/
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	/* Channels for sending and receiving elevator struct*/
-	ch_receive := make(chan distributor.DistributorElevator)
-	ch_transmit := make(chan distributor.DistributorElevator)
+func communicationInit(ch_receive chan<- distributor.DistributorElevator, ch_transmit chan<- distributor.DistributorElevator) {
 
 	/* Start the transmitter/receiver pair on some port*/
 	go bcast.Transmitter(16569, ch_receive)
@@ -41,12 +35,9 @@ func communicationInit() {
 
 }
 
-func peerUpdateInit(peerUpdateCh chan<- peers.PeerUpdate) {
+func peerUpdateInit(ch_peerUpdate chan<- peers.PeerUpdate, ch_peerTxEnable chan<- bool) {
 
-	/* We can disable/enable the transmitter after it has been started.*/
-	/* This could be used to signal that we are somehow "unavailable".*/
-	peerTxEnable := make(chan bool)
-
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	/* Start the transmitter/receiver pair on some port*/
+	go peers.Transmitter(15647, distributor.id, ch_peerTxEnable)
+	go peers.Receiver(15647, ch_peerUpdate)
 }

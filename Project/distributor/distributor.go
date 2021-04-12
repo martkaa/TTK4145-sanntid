@@ -6,8 +6,16 @@ import (
 	"Project/elevio"
 )
 
-type RequestState int // Bestillingens forskjellige tilstander,
+/* Set id from command line using 'go run main.go -id=our_id'*/
+/*
+var id string
+flag.StringVar(&id, "id", "", "id of this peer")
+flag.Parse()
+*/
 
+type RequestState int
+
+/* Order types*/
 const (
 	None      RequestState = 0
 	Order                  = 1
@@ -15,7 +23,7 @@ const (
 	Complete               = 3
 )
 
-type DistributorElevator struct { // Struct for heisen slik distributor modulen ser de
+type DistributorElevator struct {
 	Id       int
 	Floor    int
 	Dir      elevio.MotorDirection
@@ -23,16 +31,37 @@ type DistributorElevator struct { // Struct for heisen slik distributor modulen 
 	Behave   elevator.Behaviour
 }
 
-type DistributorOrder struct { // Struct man sende til og fra Cost.
+/* Input to cost module*/
+type DistributorOrder struct {
 	Elev DistributorElevator
 	Req  elevio.ButtonEvent
 }
 
 func DistributorFsm(internalStateChan chan elevator.Behaviour, internalOrderChan chan elevio.ButtonEvent) {
 
+	/*
+		Communication stuff
+	*/
+
+	/* Channels for sending and receiving elevator struct*/
+	ch_receive := make(chan distributor.DistributorElevator)
+	ch_transmit := make(chan distributor.DistributorElevator)
+
+	/* We can disable/enable the transmitter after it has been started.*/
+	/* This could be used to signal that we are somehow "unavailable".*/
+	ch_peerTxEnable := make(chan bool)
+	peerUpdateCh := make(chan peers.PeerUpdate)
+
+	go communication.communicationInit(ch_receive, ch_transmit)
+	go communication.peerUpdateInit(ch_receive, ch_peerTxEnable)
+
+	/**/
+
+	/* Array containing all elevators on network*/
 	e := make([]*DistributorElevator, 0)
 	elevators := e
 
+	/* Channel for triggers in fsm*/
 	elevatorsUpdate := make(chan []DistributorElevator)
 	newInternalRequest := make(chan elevio.ButtonEvent)
 	assignedDistributorOrder := make(chan DistributorOrder) // Kanal for å motta bestilling fra Cost
