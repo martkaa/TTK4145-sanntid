@@ -1,7 +1,8 @@
 package communication
 
 import (
-	"Project/distributor"
+	"Project/elevator"
+	"Project/elevio"
 	"Project/network/bcast"
 	"Project/network/peers"
 )
@@ -27,7 +28,15 @@ Elevator struct on the network can be read from channel ch_receive.
 Note that all members we want to transmit must be public. Any private members will be received as zero-values.
 */
 
-func CommunicationInit(ch_receive chan<- distributor.DistributorElevator, ch_transmit chan<- distributor.DistributorElevator) {
+type CommunicationElevator struct {
+	Id       int
+	Floor    int
+	Dir      elevio.MotorDirection
+	Requests [elevator.NumFloors][elevator.NumButtons]int
+	Behave   elevator.Behaviour
+}
+
+func CommunicationInit(ch_receive chan<- CommunicationElevator, ch_transmit chan<- CommunicationElevator) {
 
 	/* Start the transmitter/receiver pair on some port*/
 	go bcast.Transmitter(16569, ch_receive)
