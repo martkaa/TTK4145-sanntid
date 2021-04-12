@@ -44,9 +44,9 @@ func CommunicationInit(ch_receive chan<- CommunicationElevator, ch_transmit chan
 
 }
 
-func PeerUpdateInit(ch_peerUpdate chan<- peers.PeerUpdate, ch_peerTxEnable chan<- bool) {
+func PeerUpdateInit(id string, ch_peerUpdate chan<- peers.PeerUpdate, ch_peerTxEnable chan bool) {
 
 	/* Start the transmitter/receiver pair on some port*/
-	go peers.Transmitter(15647, distributor.id, ch_peerTxEnable)
+	go peers.Transmitter(15647, id, ch_peerTxEnable)
 	go peers.Receiver(15647, ch_peerUpdate)
 }

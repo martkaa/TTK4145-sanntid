@@ -13,6 +13,7 @@ const NumElevators = 4
 // Kan ikke inkludere distributor her grunnet import cylcle-opplegg. Må benytte elevator-struktet
 // og konvertere i distributor-moduelen.
 
+// Struct that contains all information neccecsary to determine the elvator with the lowest cost.
 type CostElevator struct {
 	Id   int
 	Elev elevator.Elevator
@@ -31,41 +32,40 @@ func Cost(elevators []CostElevator, req elevio.ButtonEvent, ch_assignedDistribut
 			minCost = elevCost
 		}
 	}
-	minElev.Elev.Requests[req.Floor][req.Button] = true
-	ch_assignedDistributorOrder <- CostElevator{Elev: minElev, Req: req}
+	ch_assignedDistributorOrder <- CostElevator{Id: minElev.Id, Req: req}
 }
 
-func TimeToServeRequest(e_old elevator.Elevator, req elevio.ButtonEvent) int {
+func TimeToServeRequest(e_old CostElevator, req elevio.ButtonEvent) int {
 	e := e_old
-	e.Requests[req.Floor][req.Button] = true
+	e.Elev.Requests[req.Floor][req.Button] = true
 
 	arrivedAtRequest := false
 
 	duration := 0
 
-	switch e.Behave {
+	switch e.Elev.Behave {
 	case elevator.Idle:
-		request.RequestChooseDirection(&e)
-		if e.Dir == elevio.MD_Stop {
+		request.RequestChooseDirection(&e.Elev)
+		if e.Elev.Dir == elevio.MD_Stop {
 			return duration
 		}
 	case elevator.Moving:
 		duration += TRAVEL_TIME / 2
-		e.Floor += int(e.Dir)
+		e.Elev.Floor += int(e.Elev.Dir)
 	case elevator.DoorOpen:
 		duration -= elevator.DoorOpenDuration / 2
 	}
 
 	for {
-		if request.RequestShouldStop(&e) {
-			request.RequestClearAtCurrentFloor(&e)
+		if request.RequestShouldStop(&e.Elev) {
+			request.RequestClearAtCurrentFloor(&e.Elev)
 			if arrivedAtRequest {
 				return duration
 			}
 			duration += elevator.DoorOpenDuration
-			request.RequestChooseDirection(&e)
+			request.RequestChooseDirection(&e.Elev)
 		}
-		e.Floor += int(e.Dir)
+		e.Elev.Floor += int(e.Elev.Dir)
 		duration += TRAVEL_TIME
 	}
 

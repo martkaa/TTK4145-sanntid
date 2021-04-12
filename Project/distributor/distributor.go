@@ -20,9 +20,9 @@ type RequestState int
 /* Order types*/
 const (
 	None      RequestState = 0
-	Order                  = 1
-	Comfirmed              = 2
-	Complete               = 3
+	Order     RequestState = 1
+	Comfirmed RequestState = 2
+	Complete  RequestState = 3
 )
 
 type DistributorElevator struct {
@@ -91,10 +91,10 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 	}
 }
 
-func distributorOrderAssigned(D DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
-	if D.Elev.Id == localId {
-		D.Elev.Requests[D.Req.Floor][D.Req.Button] = Comfirmed
-		ch_localChan <- D.Req /* Take a look at this syntaks! */
+func distributorOrderAssigned(order DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
+	if order.Elev.Id == localId {
+		order.Elev.Requests[order.Req.Floor][order.Req.Button] = Comfirmed
+		ch_localChan <- order.Req /* Take a look at this syntaks! */
 	}
 	/*else {
 		Send to network
@@ -165,10 +165,15 @@ func distributorRequestsToElevatorRequest(distributorRequests [elevator.NumFloor
 
 /* Function converting from CommunicationElevator to DistributorElevator */
 func communicationElevatorToDistributorElevator(c communication.CommunicationElevator) DistributorElevator {
-	return DistributorElevator{
-		Id:       c.Id,
-		Floor:    c.Floor,
-		Dir:      c.Dir,
-		Requests: RequestState(c.Requests),
-		Behave:   c.behave}
+	e := DistributorElevator{
+		Id:     c.Id,
+		Floor:  c.Floor,
+		Dir:    c.Dir,
+		Behave: c.Behave}
+	for floor := range e.Requests {
+		for button := range e.Requests[floor] {
+			e.Requests[floor][button] = RequestState(c.Requests[floor][button])
+		}
+	}
+	return e
 }

@@ -9,21 +9,21 @@ import (
 )
 
 func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behaviour) {
-	elev := elevator.InitElev(elevator.NumFloors, elevator.NumButtons)
+	elev := elevator.InitElev()
 
 	e := &elev
 
 	elevio.Init("localhost:23456", elevator.NumFloors)
 
 	ch_arrivedAtFloors := make(chan int)
-	ch_osbstr := make(chan bool)
+	ch_obstr := make(chan bool)
 	ch_stopButton := make(chan bool)
 
 	ch_timer := make(chan bool)
 
-	go elevio.PollFloorSensor(drv_floors)
-	go elevio.PollObstructionSwitch(drv_obstr)
-	go elevio.PollStopButton(drv_stop)
+	go elevio.PollFloorSensor(ch_arrivedAtFloors)
+	go elevio.PollObstructionSwitch(ch_obstr)
+	go elevio.PollStopButton(ch_stopButton)
 
 	for {
 		fmt.Println(elevator.Behaviour(e.Behave))
@@ -41,7 +41,7 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 			e.Floor = f
 			fsmOnFloorArrival(e, ch_timer)
 
-		case a := <-ch_osbstr:
+		case a := <-ch_obstr:
 			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
