@@ -21,12 +21,12 @@ const (
 type Elevator struct {
 	Floor      int
 	Dir        elevio.MotorDirection
-	Requests   [elevator.NumFloors][elevator.NumButtons]bool
+	Requests   [NumFloors][NumButtons]bool
 	Behave     Behaviour
 	TimerCount int
 }
 
-func InitElev() Elevator {
+func InitElev(id string) Elevator {
 	var requests [NumFloors][NumButtons]bool
 	for floor := range requests {
 		for button := range requests[floor] {

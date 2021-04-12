@@ -8,8 +8,8 @@ import (
 	"fmt"
 )
 
-func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behaviour) {
-	elev := elevator.InitElev()
+func Fsm(id string, ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Behaviour) {
+	elev := elevator.InitElev(id)
 
 	e := &elev
 
@@ -29,10 +29,10 @@ func Fsm(orderChan chan elevio.ButtonEvent, elevatorState chan<- elevator.Behavi
 		fmt.Println(elevator.Behaviour(e.Behave))
 		elevator.LightsElev(*e)
 
-		elevatorState <- e.Behave // Sende state til distributor, usikker på hvor ofte vi trenger å gjøre det.
+		ch_elevatorState <- e.Behave // Sende state til distributor, usikker på hvor ofte vi trenger å gjøre det.
 
 		select {
-		case r := <-orderChan: // Mottar ny bestilling fra distributor
+		case r := <-ch_orderChan: // Mottar ny bestilling fra distributor
 			fmt.Printf("%+v\n", r)
 			fsmOnRequestButtonPress(r.Floor, r.Button, e, ch_timer)
 
