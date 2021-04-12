@@ -2,8 +2,8 @@ package distributor
 
 import (
 	"Project/communication"
+	"Project/config"
 	"Project/cost"
-	"Project/elevType"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/network/peers"
@@ -20,8 +20,8 @@ const localId = 1
 
 /* Input to cost module*/
 type DistributorOrder struct {
-	Elev elevType.Distributor
-	Req  elevType.Request
+	Elev config.DistributorElevator
+	Req  config.Request
 }
 
 func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrderChan chan elevio.ButtonEvent) {
@@ -32,7 +32,7 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 
 	/* Channels for sending and receiving elevator struct*/
 	ch_receive := make(chan peers.PeerUpdate)
-	ch_transmit := make(chan elevType.Distributor)
+	ch_transmit := make(chan config.DistributorElevator)
 
 	/* We can disable/enable the transmitter after it has been started.*/
 	/* This could be used to signal that we are somehow "unavailable".*/
@@ -45,12 +45,12 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 	/**/
 
 	/* Array containing all elevators on network*/
-	elevators := make([]*elevType.Distributor, 0)
+	elevators := make([]*config.DistributorElevator, 0)
 
 	/* Channel for triggers in fsm*/
-	ch_elevatorsUpdate := make(chan []elevType.Distributor)
+	ch_elevatorsUpdate := make(chan []config.DistributorElevator)
 	ch_newInternalRequest := make(chan elevio.ButtonEvent)
-	ch_assignedDistributorOrder := make(chan *elevType.Distributor) /* Channel for receiving assigned order from Cost */
+	ch_assignedDistributorOrder := make(chan *config.DistributorElevator) /* Channel for receiving assigned order from Cost */
 	ch_localChan := make(chan elevio.ButtonEvent)
 
 	go elevio.PollButtons(ch_newInternalRequest) /* Channel for receiving new local orders */
@@ -76,7 +76,7 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 
 func distributorOrderAssigned(order DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
 	if order.Elev.Id == localId {
-		order.Elev.Requests[order.Req.Floor][order.Req.Button] = elevType.Comfirmed
+		order.Elev.Requests[order.Req.Floor][order.Req.Button] = config.Comfirmed
 		ch_localChan <- order.Req /* Take a look at this syntaks! */
 	}
 	/*else {
@@ -84,7 +84,7 @@ func distributorOrderAssigned(order DistributorOrder, ch_localChan chan<- elevio
 	}*/
 }
 
-func distributorUpdate(elevators []*elevType.Distributor, updatedElevators []elevType.Distributor) {
+func distributorUpdate(elevators []*config.DistributorElevator, updatedElevators []config.DistributorElevator) {
 	for _, updatedElevator := range updatedElevators {
 		for _, elevator := range elevators {
 			if elevator.Id == updatedElevator.Id {
@@ -96,7 +96,7 @@ func distributorUpdate(elevators []*elevType.Distributor, updatedElevators []ele
 	}
 }
 
-func distributorUpdateInternalState(elevators []*elevType.Distributor, updatedBehaviour elevator.Behaviour) {
+func distributorUpdateInternalState(elevators []*config.DistributorElevator, updatedBehaviour elevator.Behaviour) {
 	// Vi kan lage det sånn at den lokale heisen alltid har indeks 0?
 
 	if len(elevators) == 0 {
@@ -107,10 +107,10 @@ func distributorUpdateInternalState(elevators []*elevType.Distributor, updatedBe
 
 /* Updating the DistributorElevators according to elevator assigned from Cost-function */
 
-func updateDistributorElevators(elevators []*elevType.Distributor, assignedOrderElevator elevType.Distributor) {
+func updateDistributorElevators(elevators []*config.DistributorElevator, assignedOrderElevator config.DistributorElevator) {
 	for _, e := range elevators {
 		if e.Id == costElevator.Id {
-			e.Requests[assignedOrderElevator.Floor][assignedOrderElevator.Button] = elevType.Comfirmed
+			e.Requests[assignedOrderElevator.Floor][assignedOrderElevator.Button] = config.Comfirmed
 		}
 	}
 }

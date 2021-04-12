@@ -1,4 +1,4 @@
-package elevType
+package config
 
 type Direction int
 
@@ -38,7 +38,7 @@ type Request struct {
 	Button ButttonType
 }
 
-type Distributor struct {
+type DistributorElevator struct {
 	Id       string
 	Floor    int
 	Dir      Direction

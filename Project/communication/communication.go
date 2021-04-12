@@ -1,7 +1,7 @@
 package communication
 
 import (
-	"Project/elevType"
+	"Project/config"
 	"Project/network/bcast"
 	"Project/network/peers"
 )
@@ -27,7 +27,7 @@ Elevator struct on the network can be read from channel ch_receive.
 Note that all members we want to transmit must be public. Any private members will be received as zero-values.
 */
 
-func CommunicationInit(ch_receive chan<- elevType.Distributor, ch_transmit chan<- elevType.Distributor) {
+func CommunicationInit(ch_receive chan<- config.DistributorElevator, ch_transmit chan<- config.DistributorElevator) {
 
 	/* Start the transmitter/receiver pair on some port*/
 	go bcast.Transmitter(16569, ch_receive)

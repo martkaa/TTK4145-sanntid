@@ -1,7 +1,7 @@
 package cost
 
 import (
-	"Project/elevType"
+	"Project/config"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/request"
@@ -16,7 +16,7 @@ const NumElevators = 4
 
 // Struct that contains all information neccecsary to determine the elvator with the lowest cost.
 
-func Cost(elevators []*elevType.Distributor, req elevio.ButtonEvent, ch_assignedDistributorOrder chan *elevType.Distributor) {
+func Cost(elevators []*config.DistributorElevator, req elevio.ButtonEvent, ch_assignedDistributorOrder chan *config.DistributorElevator) {
 
 	minElev := elevators[0]
 	minCost := 999999
@@ -31,7 +31,7 @@ func Cost(elevators []*elevType.Distributor, req elevio.ButtonEvent, ch_assigned
 	ch_assignedDistributorOrder <- minElev
 }
 
-func TimeToServeRequest(e_old *elevType.Distributor, req elevio.ButtonEvent) int {
+func TimeToServeRequest(e_old *config.DistributorElevator, req elevio.ButtonEvent) int {
 	e := e_old
 	e.Requests[req.Floor][req.Button] = true
 
@@ -40,15 +40,15 @@ func TimeToServeRequest(e_old *elevType.Distributor, req elevio.ButtonEvent) int
 	duration := 0
 
 	switch e.Behave {
-	case elevType.Idle:
+	case config.Idle:
 		request.RequestChooseDirection(e)
-		if e.Dir == elevType.Stop {
+		if e.Dir == config.Stop {
 			return duration
 		}
-	case elevType.Moving:
+	case config.Moving:
 		duration += TRAVEL_TIME / 2
 		e.Floor += int(e.Dir)
-	case elevType.DoorOpen:
+	case config.DoorOpen:
 		duration -= elevator.DoorOpenDuration / 2
 	}
 
