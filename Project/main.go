@@ -1,7 +1,8 @@
 package main
 
 import (
-	"Project/distributor"
+	"Project/distributor/distributor"
+	"Project/distributor/watchdog"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/fsm"
@@ -17,5 +18,10 @@ func main() {
 
 	go fsm.Fsm(ch_internalOrderChan, ch_internalStateChan)
 	go distributor.DistributorFsm(ch_internalStateChan, ch_internalOrderChan)
+	elevators := make([]*config.DistributorElevator, 0) 
 
+	//Init watchdog
+	watchdogTimeoutC := make(bool chan)
+	watchdogUpdateStateC := make(chan elevators, 10)
+	go watchdog.InitWatchdog(watchdogTimeoutC, watchdogUpdateStateC, config.WATCHDOG_TIMEOUT)
 }
