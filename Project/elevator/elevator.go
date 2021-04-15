@@ -26,7 +26,7 @@ type Elevator struct {
 	TimerCount int
 }
 
-func InitElev(id string) Elevator {
+func InitElev() Elevator {
 	var requests [NumFloors][NumButtons]bool
 	for floor := range requests {
 		for button := range requests[floor] {

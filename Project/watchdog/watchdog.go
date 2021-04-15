@@ -1,11 +1,12 @@
 package watchdog
 
+/*
 import (
 	"time"
 )
 
 // skal vi ha en global elev med requests også?
-elevators := make([]*config.DistributorElevator, 0) 
+elevators := make([]*config.DistributorElevator, 0)
 
 //Fuc to check if there are any hall orders
 func hasOrders(elevState elevators) bool {
@@ -43,13 +44,14 @@ func watchdog(timeOutC chan<- bool, elevState chan<- elevators, timeout time.Dur
 				floorMap[newElevID] = newElev.Floor
 			}
 		//Watchdog timed out, alert distributor
-		case <- watchdogTimer.C:
+		case <-watchdogTimer.C:
 			timeout <- true
 			watchdogTimer.Reset(timeout)
 		default:
-			if !watchdogEnabled && watchdogTimer.Stop(){
+			if !watchdogEnabled && watchdogTimer.Stop() {
 				watchdogTimer.Reset(timeout)
 			}
 		}
 	}
 }
+*/

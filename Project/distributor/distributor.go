@@ -2,11 +2,12 @@ package distributor
 
 import (
 	"Project/config"
-	"Project/cost"
 	"Project/elevator"
 	"Project/elevio"
+	"Project/fsm"
+	"Project/network/bcast"
 	"Project/network/peers"
-	"flag"
+	"fmt"
 )
 
 /* Set id from command line using 'go run main.go -id=our_id'*/
@@ -15,26 +16,17 @@ var id string
 flag.StringVar(&id, "id", "", "id of this peer")
 flag.Parse()
 */
-
-const localId = 1
-
 /* Input to cost module*/
 type DistributorOrder struct {
 	Elev config.DistributorElevator
 	Req  config.Request
 }
 
-func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrderChan chan elevio.ButtonEvent) {
+func DistributorFsm(id string) {
 
 	/*
 		Communication stuff
 	*/
-
-	/* Set id from command line using 'go run main.go -id=our_id'*/
-
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
 
 	/* We make a channel for receiving updates on the id's of the peers that are alive on the network*/
 	ch_peerUpdate := make(chan peers.PeerUpdate)
@@ -46,8 +38,8 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 	go peers.Receiver(15647, ch_peerUpdate)
 
 	/* Channels for sending and receiving elevator struct*/
-	ch_receive := make(chan config.DistributorElevator)
-	ch_transmit := make(chan config.DistributorElevator)
+	ch_receive := make(chan []config.DistributorElevator)
+	ch_transmit := make(chan []config.DistributorElevator)
 
 	go bcast.Transmitter(16569, ch_transmit)
 	go bcast.Receiver(16569, ch_receive)
@@ -57,9 +49,11 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 		Initialize elevators and set states
 	*/
 
-	p := ch_peerUpdate
+	/*p := ch_peerUpdate*/
 
-	elevators := make([]*config.DistributorElevator, len(p.Peers))
+	elevators := make([]*config.DistributorElevator, 0)
+	thisElevator := distributorElevatorInit(id)
+	elevators = append(elevators, &thisElevator)
 
 	/* Update elevator in elevators that corresponds to local elevator*/
 
@@ -71,50 +65,54 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 	/**/
 
 	/* Channel for triggers in fsm*/
-	ch_elevatorsUpdate := make(chan []config.DistributorElevator)
+	//ch_elevatorsUpdate := make(chan []config.DistributorElevator)
 	ch_newInternalRequest := make(chan elevio.ButtonEvent)
-	ch_assignedDistributorOrder := make(chan *config.DistributorElevator) /* Channel for receiving assigned order from Cost*/
-	ch_localChan := make(chan elevio.ButtonEvent)
+	ch_localElevUpdate := make(chan elevator.Elevator)
+	//ch_assignedDistributorOrder := make(chan *config.DistributorElevator) /* Channel for receiving assigned order from Cost*/
+	ch_orderToLocal := make(chan elevio.ButtonEvent) /* Channel for getting button event from fsm */
 
 	go elevio.PollButtons(ch_newInternalRequest) /* Channel for receiving new local orders*/
+
+	go fsm.Fsm(ch_orderToLocal, ch_localElevUpdate)
 
 	for {
 		select {
 
-		case updatedElevators := <-ch_elevatorsUpdate:
-			/* Update local elevator in elevators*/
-			/* Broadcast*/
-			distributorUpdate(elevators, updatedElevators)
+		/*
+			case updatedElevators := <-ch_elevatorsUpdate:
+				//Update local elevator in elevators
+				// Broadcast
+				distributorUpdate(elevators, updatedElevators)*/
 
 		case r := <-ch_newInternalRequest:
+
 			/* Check if hall or cab order*/
 			/*
 				If cab order, send to local elevator
 			*/
 
 			/* If hall order ...*/
-			go cost.Cost(elevators, r, ch_assignedDistributorOrder)
-
-		case assignedElevator := <-ch_assignedDistributorOrder:
+			///go cost.Cost(elevators, r, ch_assignedDistributorOrder)
+			//assignedElevator := <-ch_assignedDistributorOrder
 			/* Check if order is assign to local or external elevator*/
 			/*
 				If local elevator, set corresponding element on elevator.Requests to confirmed and broadcast
 			*/
 
 			/* If external elevator, set corresponding element on elevator.Requests to Order ... */
-			updateDistributorElevators(elevators, *assignedElevator)
+			//updateDistributorElevators(elevators, *assignedElevator)
 			/* Broadcast*/
+			elevators[0].Requests[r.Floor][r.Button] = config.Comfirmed
+			ch_orderToLocal <- r
+			fmt.Println(elevators[0].Requests)
+			distributorTransmit(elevators, ch_transmit)
 
-		case newBehaviour := <-ch_internalStateChan:
-			distributorUpdateInternalState(elevators, newBehaviour)
+		case updatedSate := <-ch_localElevUpdate:
+			distributorUpdateInternalState(elevators, updatedSate)
+			distributorTransmit(elevators, ch_transmit)
 
-		case e := ch_receive:
-			for _, elevator := range elevators {
-				if e.Id == elevator.Id {
-					elevator = e
-					break
-				}
-			}
+		case updatedElevators := <-ch_receive:
+			distributorUpdateElevators(elevators, updatedElevators)
 		}
 	}
 }
@@ -122,7 +120,7 @@ func DistributorFsm(ch_internalStateChan chan elevator.Behaviour, ch_internalOrd
 /*
 	Elevator-state update stuff
 */
-func distributorUpdate(elevators []*config.DistributorElevator, updatedElevators []config.DistributorElevator) {
+func distributorUpdateElevators(elevators []*config.DistributorElevator, updatedElevators []config.DistributorElevator) {
 	for _, updatedElevator := range updatedElevators {
 		for _, elevator := range elevators {
 			if elevator.Id == updatedElevator.Id {
@@ -134,35 +132,46 @@ func distributorUpdate(elevators []*config.DistributorElevator, updatedElevators
 	}
 }
 
-func distributorUpdateInternalState(elevators []*config.DistributorElevator, updatedBehaviour elevator.Behaviour) {
+func distributorUpdateInternalState(elevators []*config.DistributorElevator, e elevator.Elevator) {
 	// Vi kan lage det sånn at den lokale heisen alltid har indeks 0?
-
-	if len(elevators) == 0 {
-		return
+	elevators[0].Behave = config.Behaviour(e.Behave)
+	elevators[0].Floor = e.Floor
+	for floor := range e.Requests {
+		for button := range e.Requests[floor] {
+			if !e.Requests[floor][button] && elevators[0].Requests[floor][button] == config.Comfirmed {
+				elevators[0].Requests[floor][button] = config.Complete
+			}
+		}
 	}
-	elevators[0].Behave = updatedBehaviour
 }
 
 /*
 	Assigning order stuff
 */
 
-func distributorOrderAssigned(order DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
-	if order.Elev.Id == localId {
-		order.Elev.Requests[order.Req.Floor][order.Req.Button] = config.Comfirmed
-		ch_localChan <- order.Req /* Take a look at this syntaks! */
-	}
-	/*else {
+/*func distributorOrderAssigned(order DistributorOrder, ch_localChan chan<- elevio.ButtonEvent) {
+if order.Elev.Id ==  {
+	order.Elev.Requests[order.Req.Floor][order.Req.Button] = config.Comfirmed
+	ch_localChan <- order.Req /* Take a look at this syntaks! */
+/*else {
 		Send to network
-	}*/
-}
+	}
+}*/
 
 /* Updating the DistributorElevators according to elevator assigned from Cost-function */
 
-func updateDistributorElevators(elevators []*config.DistributorElevator, assignedOrderElevator config.DistributorElevator) {
+func distributorTransmit(elevators []*config.DistributorElevator, ch_transmit chan<- []config.DistributorElevator) {
+	tempElevators := make([]config.DistributorElevator, 0)
 	for _, e := range elevators {
-		if e.Id == costElevator.Id {
-			e.Requests[assignedOrderElevator.Floor][assignedOrderElevator.Button] = config.Order
-		}
+		tempElevators = append(tempElevators, *e)
 	}
+	ch_transmit <- tempElevators
+}
+
+func distributorElevatorInit(id string) config.DistributorElevator {
+	requests := make([][]config.RequestState, 4)
+	for floor := range requests {
+		requests[floor] = make([]config.RequestState, 3)
+	}
+	return config.DistributorElevator{Requests: requests, Id: id, Floor: 0, Behave: config.Idle}
 }

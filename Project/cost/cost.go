@@ -1,5 +1,6 @@
 package cost
 
+/*
 import (
 	"Project/config"
 	"Project/elevator"
@@ -33,7 +34,7 @@ func Cost(elevators []*config.DistributorElevator, req elevio.ButtonEvent, ch_as
 
 func TimeToServeRequest(e_old *config.DistributorElevator, req elevio.ButtonEvent) int {
 	e := e_old
-	e.Requests[req.Floor][req.Button] = true
+	e.Requests[req.Floor][req.Button] = 1
 
 	arrivedAtRequest := false
 
@@ -65,4 +66,4 @@ func TimeToServeRequest(e_old *config.DistributorElevator, req elevio.ButtonEven
 		duration += TRAVEL_TIME
 	}
 
-}
+}*/
