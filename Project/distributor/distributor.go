@@ -2,11 +2,12 @@ package distributor
 
 import (
 	"Project/config"
+	"Project/cost"
 	"Project/elevator"
 	"Project/elevio"
 	"Project/fsm"
 	"Project/network/bcast"
-	"Project/network/peers"
+	"Project/network/bcastork/peers"
 	"fmt"
 )
 
@@ -68,8 +69,8 @@ func DistributorFsm(id string) {
 	//ch_elevatorsUpdate := make(chan []config.DistributorElevator)
 	ch_newInternalRequest := make(chan elevio.ButtonEvent)
 	ch_localElevUpdate := make(chan elevator.Elevator)
-	//ch_assignedDistributorOrder := make(chan *config.DistributorElevator) /* Channel for receiving assigned order from Cost*/
-	ch_orderToLocal := make(chan elevio.ButtonEvent) /* Channel for getting button event from fsm */
+	ch_assignedDistributorOrder := make(chan config.CostRequest) /* Channel for receiving assigned order from Cost*/
+	ch_orderToLocal := make(chan elevio.ButtonEvent)             /* Channel for getting button event from fsm */
 
 	go elevio.PollButtons(ch_newInternalRequest) /* Channel for receiving new local orders*/
 
@@ -85,15 +86,26 @@ func DistributorFsm(id string) {
 				distributorUpdate(elevators, updatedElevators)*/
 
 		case r := <-ch_newInternalRequest:
+			if r.Button == elevio.BT_Cab {
+				elevators[0].Requests[r.Floor][config.ButtonType(int(r.Button))] = config.Comfirmed
+				ch_orderToLocal <- r
+			} else {
+				go cost.Cost(elevators, r, ch_assignedDistributorOrder)
+				assignedRequest := <-ch_assignedDistributorOrder
 
-			/* Check if hall or cab order*/
-			/*
-				If cab order, send to local elevator
-			*/
+				if assignedRequest.Id == elevators[0].Id {
+					ch_orderToLocal <- r
+					elevators[0].Requests[r.Floor][r.Button] = config.Comfirmed
+				} else {
+					for _, e := range elevators {
+						if assignedRequest.Id == e.Id {
+							e.Requests[assignedRequest.Req.Floor][assignedRequest.Req.Button] = config.Order
+						}
+					}
+				}
+				distributorTransmit(elevators, ch_transmit)
+			}
 
-			/* If hall order ...*/
-			///go cost.Cost(elevators, r, ch_assignedDistributorOrder)
-			//assignedElevator := <-ch_assignedDistributorOrder
 			/* Check if order is assign to local or external elevator*/
 			/*
 				If local elevator, set corresponding element on elevator.Requests to confirmed and broadcast
@@ -102,9 +114,7 @@ func DistributorFsm(id string) {
 			/* If external elevator, set corresponding element on elevator.Requests to Order ... */
 			//updateDistributorElevators(elevators, *assignedElevator)
 			/* Broadcast*/
-			elevators[0].Requests[r.Floor][r.Button] = config.Comfirmed
-			ch_orderToLocal <- r
-			fmt.Println(elevators[0].Requests)
+
 			distributorTransmit(elevators, ch_transmit)
 
 		case updatedSate := <-ch_localElevUpdate:
@@ -112,7 +122,24 @@ func DistributorFsm(id string) {
 			distributorTransmit(elevators, ch_transmit)
 
 		case updatedElevators := <-ch_receive:
+
 			distributorUpdateElevators(elevators, updatedElevators)
+			for floor, orders := range elevators[0].Requests {
+				if orders[0] == config.Order {
+					orders[0] = config.Comfirmed
+					ch_orderToLocal <- elevio.ButtonEvent{
+						Floor:  floor,
+						Button: elevio.ButtonType(0)}
+				}
+				if orders[1] == config.Order {
+					orders[1] = config.Comfirmed
+					ch_orderToLocal <- elevio.ButtonEvent{
+						Floor:  floor,
+						Button: elevio.ButtonType(1)}
+				}
+				distributorTransmit(elevators, ch_transmit)
+			}
+
 		}
 	}
 }
@@ -126,9 +153,10 @@ func distributorUpdateElevators(elevators []*config.DistributorElevator, updated
 			if elevator.Id == updatedElevator.Id {
 				*elevator = updatedElevator
 				break
+			} else {
+				elevators = append(elevators, &updatedElevator)
 			}
 		}
-		elevators = append(elevators, &updatedElevator)
 	}
 }
 
@@ -174,4 +202,10 @@ func distributorElevatorInit(id string) config.DistributorElevator {
 		requests[floor] = make([]config.RequestState, 3)
 	}
 	return config.DistributorElevator{Requests: requests, Id: id, Floor: 0, Behave: config.Idle}
+}
+
+func printElevators(elevators []*config.DistributorElevator) {
+	for _, e := range elevators {
+		fmt.Println(e.Id)
+	}
 }

@@ -23,8 +23,6 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	go elevio.PollObstructionSwitch(ch_obstr)
 	go elevio.PollStopButton(ch_stopButton)
 
-	fmt.Println(e.Behave)
-
 	for {
 		fmt.Println(elevator.Behaviour(e.Behave))
 		elevator.LightsElev(*e)

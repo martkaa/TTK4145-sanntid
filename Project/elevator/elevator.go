@@ -19,16 +19,18 @@ const (
 )
 
 type Elevator struct {
+	Id         string
 	Floor      int
 	Dir        elevio.MotorDirection
-	Requests   [NumFloors][NumButtons]bool
+	Requests   [][]bool
 	Behave     Behaviour
 	TimerCount int
 }
 
 func InitElev() Elevator {
-	var requests [NumFloors][NumButtons]bool
+	requests := make([][]bool, NumFloors)
 	for floor := range requests {
+		requests = append(requests, make([]bool, 3))
 		for button := range requests[floor] {
 			requests[floor][button] = false
 		}

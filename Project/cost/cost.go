@@ -1,6 +1,5 @@
 package cost
 
-/*
 import (
 	"Project/config"
 	"Project/elevator"
@@ -17,39 +16,44 @@ const NumElevators = 4
 
 // Struct that contains all information neccecsary to determine the elvator with the lowest cost.
 
-func Cost(elevators []*config.DistributorElevator, req elevio.ButtonEvent, ch_assignedDistributorOrder chan *config.DistributorElevator) {
+func Cost(elevators []*config.DistributorElevator, req elevio.ButtonEvent, ch_assignedDistributorOrder chan config.CostRequest) {
 
 	minElev := elevators[0]
 	minCost := 999999
 
 	for _, e := range elevators {
-		elevCost := TimeToServeRequest(e, req)
+		elevator := DistributorElevatorToElevator(*e)
+		elevCost := TimeToServeRequest(&elevator, req)
 		if elevCost < minCost {
 			minElev = e
 			minCost = elevCost
 		}
 	}
-	ch_assignedDistributorOrder <- minElev
+	ch_assignedDistributorOrder <- config.CostRequest{
+		Id:   minElev.Id,
+		Cost: minCost,
+		Req:  config.Request{Floor: req.Floor, Button: config.ButtonType(int(req.Button))},
+	}
 }
 
-func TimeToServeRequest(e_old *config.DistributorElevator, req elevio.ButtonEvent) int {
+func TimeToServeRequest(e_old *elevator.Elevator, req elevio.ButtonEvent) int {
 	e := e_old
-	e.Requests[req.Floor][req.Button] = 1
+	e.Requests[req.Floor][req.Button] = true
 
 	arrivedAtRequest := false
 
 	duration := 0
 
 	switch e.Behave {
-	case config.Idle:
+	case elevator.Idle:
 		request.RequestChooseDirection(e)
-		if e.Dir == config.Stop {
+		if e.Dir == elevio.MD_Stop {
 			return duration
 		}
-	case config.Moving:
+	case elevator.Moving:
 		duration += TRAVEL_TIME / 2
 		e.Floor += int(e.Dir)
-	case config.DoorOpen:
+	case elevator.DoorOpen:
 		duration -= elevator.DoorOpenDuration / 2
 	}
 
@@ -66,4 +70,26 @@ func TimeToServeRequest(e_old *config.DistributorElevator, req elevio.ButtonEven
 		duration += TRAVEL_TIME
 	}
 
-}*/
+}
+
+/* Converts type DistributorElevator to elevator.Elevator*/
+func DistributorElevatorToElevator(distElevator config.DistributorElevator) elevator.Elevator {
+	req := make([][]bool, 0)
+	for floor := range distElevator.Requests {
+		req = append(req, make([]bool, 0))
+		for button := range distElevator.Requests[floor] {
+			if distElevator.Requests[floor][button] == config.Comfirmed {
+				req[floor] = append(req[floor], true)
+			} else {
+				req[floor] = append(req[floor], false)
+			}
+		}
+	}
+	return elevator.Elevator{
+		Id:         distElevator.Id,
+		Floor:      distElevator.Floor,
+		Dir:        elevio.MotorDirection(int(distElevator.Dir)),
+		Requests:   req,
+		Behave:     elevator.Behaviour(int(distElevator.Behave)),
+		TimerCount: 0}
+}

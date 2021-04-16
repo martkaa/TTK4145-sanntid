@@ -25,17 +25,17 @@ const (
 	Moving   Behaviour = 2
 )
 
-type ButttonType int
+type ButtonType int
 
 const (
-	Cab      ButttonType = 0
-	HallUp   ButttonType = 1
-	HallDown ButttonType = 2
+	Cab      ButtonType = 0
+	HallUp   ButtonType = 1
+	HallDown ButtonType = 2
 )
 
 type Request struct {
 	Floor  int
-	Button ButttonType
+	Button ButtonType
 }
 
 type DistributorElevator struct {
@@ -44,4 +44,11 @@ type DistributorElevator struct {
 	Dir      Direction
 	Requests [][]RequestState
 	Behave   Behaviour
+}
+
+type    struct {
+	Id         string
+	Cost       int
+	AssignedId string
+	Req        Request
 }

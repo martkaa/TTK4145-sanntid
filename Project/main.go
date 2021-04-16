@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	elevio.Init("localhost:15889", 4)
+	elevio.Init("localhost:50009", 4)
 
 	/* Set id from command line using 'go run main.go -id=our_id'*/
 	var id string
