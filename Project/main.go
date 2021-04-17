@@ -8,12 +8,16 @@ import (
 
 func main() {
 
-	elevio.Init("localhost:50009", 4)
+	/* Set port from command line using 'go run main.go -port=our_id'*/
+	var port string
+	flag.StringVar(&port, "port", "", "port of this peer")
 
 	/* Set id from command line using 'go run main.go -id=our_id'*/
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
+
+	elevio.Init("localhost:"+port, 4)
 
 	finished := make(chan int)
 

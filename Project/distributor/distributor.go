@@ -7,11 +7,11 @@ import (
 	"Project/elevio"
 	"Project/fsm"
 	"Project/network/bcast"
-	"Project/network/bcastork/peers"
+	"Project/network/peers"
 	"fmt"
 )
 
-/* Set id from command line using 'go run main.go -id=our_id'*/
+/* Set id from commasnd line using 'go run main.go -id=our_id'*/
 /*
 var id string
 flag.StringVar(&id, "id", "", "id of this peer")
@@ -86,12 +86,14 @@ func DistributorFsm(id string) {
 				distributorUpdate(elevators, updatedElevators)*/
 
 		case r := <-ch_newInternalRequest:
-			if r.Button == elevio.BT_Cab {
+			if r.Button == elevio.BT_Cab || len(elevators) == 1 {
 				elevators[0].Requests[r.Floor][config.ButtonType(int(r.Button))] = config.Comfirmed
 				ch_orderToLocal <- r
 			} else {
+				fmt.Println("hei")
 				go cost.Cost(elevators, r, ch_assignedDistributorOrder)
 				assignedRequest := <-ch_assignedDistributorOrder
+				fmt.Println(assignedRequest.Cost)
 
 				if assignedRequest.Id == elevators[0].Id {
 					ch_orderToLocal <- r
@@ -122,6 +124,8 @@ func DistributorFsm(id string) {
 			distributorTransmit(elevators, ch_transmit)
 
 		case updatedElevators := <-ch_receive:
+			printElevators(updatedElevators)
+			fmt.Println(elevators)
 
 			distributorUpdateElevators(elevators, updatedElevators)
 			for floor, orders := range elevators[0].Requests {
@@ -137,7 +141,6 @@ func DistributorFsm(id string) {
 						Floor:  floor,
 						Button: elevio.ButtonType(1)}
 				}
-				distributorTransmit(elevators, ch_transmit)
 			}
 
 		}
@@ -204,7 +207,7 @@ func distributorElevatorInit(id string) config.DistributorElevator {
 	return config.DistributorElevator{Requests: requests, Id: id, Floor: 0, Behave: config.Idle}
 }
 
-func printElevators(elevators []*config.DistributorElevator) {
+func printElevators(elevators []config.DistributorElevator) {
 	for _, e := range elevators {
 		fmt.Println(e.Id)
 	}

@@ -28,14 +28,19 @@ type Elevator struct {
 }
 
 func InitElev() Elevator {
-	requests := make([][]bool, NumFloors)
-	for floor := range requests {
-		requests = append(requests, make([]bool, 3))
+	requests := make([][]bool, 0)
+	for floor := 0; floor < NumFloors; floor++ {
+		requests = append(requests, make([]bool, NumButtons))
 		for button := range requests[floor] {
 			requests[floor][button] = false
 		}
 	}
-	return Elevator{Requests: requests}
+	return Elevator{
+		Floor:      0,
+		Dir:        elevio.MD_Stop,
+		Requests:   requests,
+		Behave:     Idle,
+		TimerCount: 0}
 }
 
 func LightsElev(e Elevator) {

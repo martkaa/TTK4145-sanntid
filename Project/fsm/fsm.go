@@ -5,7 +5,6 @@ import (
 	"Project/elevio"
 	"Project/request"
 	"Project/timer"
-	"fmt"
 )
 
 func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
@@ -24,12 +23,10 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	go elevio.PollStopButton(ch_stopButton)
 
 	for {
-		fmt.Println(elevator.Behaviour(e.Behave))
 		elevator.LightsElev(*e)
 
 		select {
 		case r := <-ch_orderChan: // Mottar ny bestilling fra distributor
-			fmt.Printf("%+v\n", r)
 			fsmOnRequestButtonPress(r.Floor, r.Button, e, ch_timer, ch_elevatorState)
 
 		// Alt under her er bare avhengig av heisens interne ting
@@ -38,7 +35,6 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 			fsmOnFloorArrival(e, ch_timer, ch_elevatorState)
 
 		case a := <-ch_obstr:
-			fmt.Printf("%+v\n", a)
 			if a {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			} else {

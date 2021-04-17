@@ -46,7 +46,7 @@ type DistributorElevator struct {
 	Behave   Behaviour
 }
 
-type    struct {
+type CostRequest struct {
 	Id         string
 	Cost       int
 	AssignedId string
