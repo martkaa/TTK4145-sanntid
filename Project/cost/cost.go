@@ -30,7 +30,7 @@ func Cost(elevators []*config.DistributorElevator, req elevio.ButtonEvent, ch_as
 		}
 	}
 	ch_assignedDistributorOrder <- config.CostRequest{
-		Id:   minElev.Id,
+		Id:   minElev.ID,
 		Cost: minCost,
 		Req:  config.Request{Floor: req.Floor, Button: config.ButtonType(int(req.Button))},
 	}
@@ -86,7 +86,7 @@ func DistributorElevatorToElevator(distElevator config.DistributorElevator) elev
 		}
 	}
 	return elevator.Elevator{
-		Id:         distElevator.Id,
+		Id:         distElevator.ID,
 		Floor:      distElevator.Floor,
 		Dir:        elevio.MotorDirection(int(distElevator.Dir)),
 		Requests:   req,

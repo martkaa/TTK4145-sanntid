@@ -39,7 +39,7 @@ type Request struct {
 }
 
 type DistributorElevator struct {
-	Id       string
+	ID       string
 	Floor    int
 	Dir      Direction
 	Requests [][]RequestState
