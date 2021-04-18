@@ -1,14 +1,16 @@
 package distributor
 
 import (
-	"Project/config"
-	"Project/cost"
-	"Project/elevator"
-	"Project/elevio"
-	"Project/fsm"
-	"Project/network/bcast"
-	"Project/network/peers"
 	"fmt"
+
+	"../cost"
+	"../elevator"
+	"../elevio"
+	"../fsm"
+	"../network/bcast"
+	"../network/peers"
+
+	"../config"
 )
 
 /* Set id from commasnd line using 'go run main.go -id=our_id'*/
@@ -46,11 +48,8 @@ func DistributorFsm(id string) {
 	go bcast.Receiver(16569, ch_receive)
 
 	/*
-		elevators is an array containing all elevators on network
 		Initialize elevators and set states
 	*/
-
-	/*p := ch_peerUpdate*/
 
 	elevators := make([]*config.DistributorElevator, 0)
 	thisElevator := distributorElevatorInit(id)
@@ -90,11 +89,10 @@ func DistributorFsm(id string) {
 				elevators[0].Requests[r.Floor][config.ButtonType(int(r.Button))] = config.Comfirmed
 				ch_orderToLocal <- r
 			} else {
-				fmt.Println("hei")
 				go cost.Cost(elevators, r, ch_assignedDistributorOrder)
 				assignedRequest := <-ch_assignedDistributorOrder
-				fmt.Println(assignedRequest.Cost)
 
+				/* Update elevators slice*/
 				if assignedRequest.Id == elevators[0].Id {
 					ch_orderToLocal <- r
 					elevators[0].Requests[r.Floor][r.Button] = config.Comfirmed
@@ -120,26 +118,28 @@ func DistributorFsm(id string) {
 			distributorTransmit(elevators, ch_transmit)
 
 		case updatedSate := <-ch_localElevUpdate:
-			distributorUpdateInternalState(elevators, updatedSate)
+			distributorCheckOrderComplete(elevators, updatedSate)
 			distributorTransmit(elevators, ch_transmit)
 
 		case updatedElevators := <-ch_receive:
-			printElevators(updatedElevators)
-			fmt.Println(elevators)
+			//printElevators(updatedElevators)
+			distributorUpdateElevators(elevators, updatedElevators, ch_orderToLocal)
 
-			distributorUpdateElevators(elevators, updatedElevators)
+			/* Check if local elevators is assigned an order*/
 			for floor, orders := range elevators[0].Requests {
 				if orders[0] == config.Order {
 					orders[0] = config.Comfirmed
 					ch_orderToLocal <- elevio.ButtonEvent{
 						Floor:  floor,
 						Button: elevio.ButtonType(0)}
+					/* Transmitt confirmation*/
 				}
 				if orders[1] == config.Order {
 					orders[1] = config.Comfirmed
 					ch_orderToLocal <- elevio.ButtonEvent{
 						Floor:  floor,
 						Button: elevio.ButtonType(1)}
+					/* Transmitt confimation*/
 				}
 			}
 
@@ -150,27 +150,50 @@ func DistributorFsm(id string) {
 /*
 	Elevator-state update stuff
 */
-func distributorUpdateElevators(elevators []*config.DistributorElevator, updatedElevators []config.DistributorElevator) {
+
+// todo: Denne er feil. elevator skal ikke oppdatere sine states hvis det er den lokale heisen
+func distributorUpdateElevators(elevators []*config.DistributorElevator, updatedElevators []config.DistributorElevator, ch_orderToLocal chan elevio.ButtonEvent) {
 	for _, updatedElevator := range updatedElevators {
-		for _, elevator := range elevators {
-			if elevator.Id == updatedElevator.Id {
-				*elevator = updatedElevator
+		exist := false
+		for i, elev := range elevators {
+			if i == 0 && elev.Id == updatedElevator.Id {
+				distributorGetAssignedOrder(elev, updatedElevator, ch_orderToLocal)
+				exist = true
 				break
-			} else {
-				elevators = append(elevators, &updatedElevator)
 			}
+			if elev.Id == updatedElevator.Id {
+				*elev = updatedElevator
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			elevators = append(elevators, &updatedElevator)
 		}
 	}
 }
 
-func distributorUpdateInternalState(elevators []*config.DistributorElevator, e elevator.Elevator) {
-	// Vi kan lage det sånn at den lokale heisen alltid har indeks 0?
+func distributorCheckOrderComplete(elevators []*config.DistributorElevator, e elevator.Elevator) {
+
 	elevators[0].Behave = config.Behaviour(e.Behave)
 	elevators[0].Floor = e.Floor
 	for floor := range e.Requests {
 		for button := range e.Requests[floor] {
 			if !e.Requests[floor][button] && elevators[0].Requests[floor][button] == config.Comfirmed {
 				elevators[0].Requests[floor][button] = config.Complete
+			}
+		}
+	}
+}
+
+func distributorGetAssignedOrder(localElevator *config.DistributorElevator, updatedElevator config.DistributorElevator, ch_orderToLocal chan elevio.ButtonEvent) {
+	for floor := range localElevator.Requests {
+		for button := 1; button < elevator.NumButtons; button++ {
+			if updatedElevator.Requests[floor][button] == config.Order {
+				localElevator.Requests[floor][button] = config.Comfirmed
+				ch_orderToLocal <- elevio.ButtonEvent{
+					Floor:  floor,
+					Button: elevio.ButtonType(button)}
 			}
 		}
 	}

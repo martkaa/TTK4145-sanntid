@@ -1,9 +1,10 @@
 package main
 
 import (
-	"Project/distributor"
-	"Project/elevio"
 	"flag"
+
+	"./distributor"
+	"./elevio"
 )
 
 func main() {

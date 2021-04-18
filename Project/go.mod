@@ -1,3 +1,3 @@
-module Project
+module ..
 
 go 1.15

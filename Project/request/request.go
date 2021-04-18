@@ -1,8 +1,8 @@
 package request
 
 import (
-	"Project/elevator"
-	"Project/elevio"
+	"../elevator"
+	"../elevio"
 )
 
 func RequestsAbove(e *elevator.Elevator) bool {

@@ -1,9 +1,9 @@
 package communication
 
 import (
-	"Project/config"
-	"Project/network/bcast"
-	"Project/network/peers"
+	"../config"
+	"../network/bcast"
+	"../network/peers"
 )
 
 /*
