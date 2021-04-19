@@ -1,5 +1,8 @@
 package config
 
+const NumFloors = 4
+const NumButtons = 3
+
 type Direction int
 
 const (

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"../conn"
+	"Project/network/conn"
 )
 
 type PeerUpdate struct {

@@ -1,7 +1,7 @@
 package timer
 
 import (
-	"../elevator"
+	"Project/elevator"
 	"time"
 )
 

@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	"../elevio"
+	"Project/elevio"
 )
 
 const NumFloors = 4
@@ -19,7 +19,6 @@ const (
 )
 
 type Elevator struct {
-	Id         string
 	Floor      int
 	Dir        elevio.MotorDirection
 	Requests   [][]bool

@@ -1,10 +1,14 @@
 package distributor
 
 import (
-	"../config"
-	"../elevator"
-	"../elevio"
-	"../network/bcast"
+	"Project/config"
+	"Project/cost"
+	"Project/elevator"
+	"Project/elevio"
+	"Project/network/bcast"
+	"fmt"
+
+	"Project/fsm"
 )
 
 const localElevator = 0
@@ -27,7 +31,7 @@ func broadcast(elevators []*config.DistributorElevator, ch_transmit chan<- []con
 	ch_transmit <- tempElevators
 }
 
-func distributorFsm(id string) {
+func DistributorFsm(id string) {
 
 	/* Channels */
 	ch_newLocalOrder := make(chan elevio.ButtonEvent)
@@ -35,6 +39,9 @@ func distributorFsm(id string) {
 	ch_msgFromNetwork := make(chan []config.DistributorElevator)
 	ch_msgToNetwork := make(chan []config.DistributorElevator)
 	ch_orderToLocal := make(chan elevio.ButtonEvent)
+
+	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
+	go elevio.PollButtons(ch_newLocalOrder)
 
 	/* Functions for network communication */
 	go bcast.Transmitter(16569, ch_msgToNetwork)
@@ -48,47 +55,51 @@ func distributorFsm(id string) {
 	for {
 		select {
 		case newOrder := <-ch_newLocalOrder:
+			//fmt.Println("New order")
 			assignOrder(elevators, newOrder)
+			//fmt.Println("New order after assign")
 			if elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] == config.Comfirmed {
 				setHallLights(elevators)
 				ch_orderToLocal <- newOrder
+				fmt.Println("New order send to local")
 			}
+			fmt.Println("New order, before broadcast")
 			broadcast(elevators, ch_msgToNetwork)
 
 		case newState := <-ch_newLocalState:
+			//fmt.Println("New State")
 			updateLocalState(elevators, newState)
-			checkOrderComplete(elevators, newState)
+			//fmt.Println("New State, after updateLcalState")
+			checkLocalOrderComplete(elevators, newState)
+			//fmt.Println("New State, after checkOrderComplete")
 			broadcast(elevators, ch_msgToNetwork)
+			//fmt.Println("New State, after broadcast")
+			setHallLights(elevators)
+			//fmt.Println("New State, after setLights")
+			/* Broadcast for some seconds */
+			checkGlobalOrderComplete(elevators)
+			//fmt.Println("New State, after checkGlobalOrderComplete")
 
 		case newElevators := <-ch_msgFromNetwork:
+			//fmt.Println("New Network message")
 			updateElevators(elevators, newElevators)
+			//fmt.Println("New Network message after update ")
+			var extractNewOrder *config.Request
+			comfirmNewOrder(elevators[localElevator], extractNewOrder)
+			//fmt.Println("New Network message after comfirmed order")
 			setHallLights(elevators)
-			localComfirmedOrders := getComfirmedOrders(elevators[0].Requests)
-
-			/* Må finne en måte å huske hvilken bestilling som er ny for å kunne sende akkurat denne bestillingen videre til lokal */
-
-			if len(localComfirmedOrders) > 0 {
-				ch_newLocalOrder <- elevio.ButtonEvent
+			//fmt.Println("New Network message after set lights")
+			checkGlobalOrderComplete(elevators)
+			//fmt.Println("New Network message after after order complete")
+			if extractNewOrder != nil {
+				ch_newLocalOrder <- elevio.ButtonEvent{
+					Button: elevio.ButtonType(extractNewOrder.Button),
+					Floor:  extractNewOrder.Floor}
 				broadcast(elevators, ch_msgToNetwork)
 			}
 		}
+		// Error case: lost connection to elevator,
 	}
-}
-
-func getComfirmedOrders(localRequests [][]config.RequestState) []config.Request {
-	var orders []config.Request
-	for floor := range localRequests {
-		for button := range localRequests[floor] {
-			if localRequests[floor][button] == config.Order || localRequests[floor][button] == config.Comfirmed {
-				order := config.Request{
-					Floor:  floor,
-					Button: config.ButtonType(button),
-				}
-				orders = append(orders, order)
-			}
-		}
-	}
-	return orders
 }
 
 /*
@@ -96,18 +107,30 @@ func getComfirmedOrders(localRequests [][]config.RequestState) []config.Request 
 */
 
 func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEvent) {
+	if len(elevators) < 2 {
+		elevators[localElevator].Requests[order.Floor][order.Button] = config.Comfirmed
+		return
+	}
+
+	if order.Button == elevio.BT_Cab {
+		elevators[localElevator].Requests[order.Floor][order.Button] = config.Comfirmed
+		return
+	}
 
 	minCost := 99999
-	cost := 0
+	elevCost := 0
 	var minElev *config.DistributorElevator
 
 	for _, elev := range elevators {
-		cost = cost.Cost(*elev)
-		if cost < minCost {
-			minCost = cost
+		fmt.Println("Now, lets calculate the cost!")
+		elevCost = cost.Cost(elev, order)
+		fmt.Println("Cost calculated.")
+		if elevCost < minCost {
+			minCost = elevCost
 			minElev = elev
 		}
 	}
+	fmt.Println("The cost is ", minCost)
 	if minElev == elevators[localElevator] {
 		elevators[localElevator].Requests[order.Floor][order.Button] = config.Comfirmed
 	} else {
@@ -119,14 +142,12 @@ func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEve
 	New local state stuff
 */
 
-func comfirmOrder(elev *config.DistributorElevator) config.Request {
-	for floor := range elev.Requests {
-		for button := range elev.Requests[floor] {
-			if elev.Requests[floor][button] == config.Order {
-				elev.Requests[floor][button] = config.Comfirmed
-				return config.Request{
-					Floor:  floor,
-					Button: config.ButtonType(button),
+func checkGlobalOrderComplete(elevators []*config.DistributorElevator) {
+	for _, elev := range elevators {
+		for floor := range elev.Requests {
+			for button := range elev.Requests[floor] {
+				if elev.Requests[floor][button] == config.Complete {
+					elev.Requests[floor][button] = config.None
 				}
 			}
 		}
@@ -140,11 +161,21 @@ func updateLocalState(elevators []*config.DistributorElevator, elev elevator.Ele
 }
 
 // Todo: How to handle complete cab orders?
-func checkOrderComplete(elevators []*config.DistributorElevator, elev elevator.Elevator) {
+func checkLocalOrderComplete(elevators []*config.DistributorElevator, elev elevator.Elevator) {
 	for floor := range elev.Requests {
 		for button := range elev.Requests[floor] {
 			if !elev.Requests[floor][button] && elevators[localElevator].Requests[floor][button] == config.Comfirmed {
 				elevators[localElevator].Requests[floor][button] = config.Complete
+			}
+		}
+	}
+}
+
+func updateRequests(elev *config.DistributorElevator, newElev config.DistributorElevator) {
+	for floor := range elev.Requests {
+		for button := 1; button < len(elev.Requests[floor]); button++ {
+			if int(elev.Requests[floor][button]) < int(newElev.Requests[floor][button]) {
+				elev.Requests[floor][button] = newElev.Requests[floor][button]
 			}
 		}
 	}
@@ -158,11 +189,11 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 		elevExist := false
 		for _, elev := range elevators {
 			if elev.ID == newElev.ID {
-				if newElev.ID == elevators[localElevator].ID {
-					elev.Requests = newElev.Requests
-					newOrder := comfirmOrder(elev)
-				} else {
-					*elev = newElev
+				updateRequests(elev, newElev)
+				if newElev.ID != elevators[localElevator].ID {
+					elev.Behave = newElev.Behave
+					elev.Dir = newElev.Dir
+					elev.Floor = newElev.Floor
 				}
 				elevExist = true
 				break
@@ -176,12 +207,30 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 	}
 }
 
+func comfirmNewOrder(elev *config.DistributorElevator, extractNewOrder *config.Request) {
+	for floor := range elev.Requests {
+		for button := range elev.Requests[floor] {
+			if elev.Requests[floor][button] == config.Order {
+				extractNewOrder.Floor = floor
+				extractNewOrder.Button = config.ButtonType(button)
+				elev.Requests[floor][button] = config.Comfirmed
+			}
+		}
+	}
+	extractNewOrder = nil
+}
+
 // Må huske å skru av lysene når bestillingen er utført
 func setHallLights(elevators []*config.DistributorElevator) {
 	for _, elev := range elevators {
-		comfirmedOrders := getComfirmedOrders(elev.Requests)
-		for _, order := range comfirmedOrders {
-			elevio.SetButtonLamp(elevio.ButtonType(order.Button), order.Floor, true)
+		for floor := range elev.Requests {
+			for button := range elev.Requests[floor] {
+				if elev.Requests[floor][button] == config.Comfirmed {
+					elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
+				} else if elev.Requests[floor][button] == config.Complete {
+					elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
+				}
+			}
 		}
 	}
 }

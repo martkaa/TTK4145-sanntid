@@ -1,10 +1,10 @@
 package fsm
 
 import (
-	"../elevator"
-	"../elevio"
-	"../request"
-	"../timer"
+	"Project/elevator"
+	"Project/elevio"
+	"Project/request"
+	"Project/timer"
 )
 
 func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
