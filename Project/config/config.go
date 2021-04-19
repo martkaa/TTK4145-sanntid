@@ -3,6 +3,8 @@ package config
 const NumFloors = 4
 const NumButtons = 3
 
+const NoOrder = -1
+
 type Direction int
 
 const (
@@ -31,10 +33,12 @@ const (
 type ButtonType int
 
 const (
-	Cab      ButtonType = 0
-	HallUp   ButtonType = 1
-	HallDown ButtonType = 2
+	HallUp   ButtonType = 0
+	HallDown ButtonType = 1
+	Cab      ButtonType = 2
 )
+
+
 
 type Request struct {
 	Floor  int
@@ -55,3 +59,4 @@ type CostRequest struct {
 	AssignedId string
 	Req        Request
 }
+

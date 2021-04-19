@@ -1,10 +1,10 @@
 package fsm
 
 import (
-	"Project/elevator"
-	"Project/elevio"
-	"Project/request"
-	"Project/timer"
+	"../elevator"
+	"../elevio"
+	"../request"
+	"../timer"
 )
 
 func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
@@ -16,23 +16,26 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	ch_obstr := make(chan bool)
 	ch_stopButton := make(chan bool)
 
-	ch_timer := make(chan bool)
+	ch_timerDoor := make(chan bool)
+	ch_timerUpdateState := make(chan bool)
 
 	go elevio.PollFloorSensor(ch_arrivedAtFloors)
 	go elevio.PollObstructionSwitch(ch_obstr)
 	go elevio.PollStopButton(ch_stopButton)
+
+	go timer.TimerUpdateState(1000, ch_timerUpdateState)
 
 	for {
 		elevator.LightsElev(*e)
 
 		select {
 		case r := <-ch_orderChan: // Mottar ny bestilling fra distributor
-			fsmOnRequestButtonPress(r.Floor, r.Button, e, ch_timer, ch_elevatorState)
+			fsmOnRequestButtonPress(r.Floor, r.Button, e, ch_timerDoor, ch_elevatorState)
 
 		// Alt under her er bare avhengig av heisens interne ting
 		case f := <-ch_arrivedAtFloors:
 			e.Floor = f
-			fsmOnFloorArrival(e, ch_timer, ch_elevatorState)
+			fsmOnFloorArrival(e, ch_timerDoor, ch_elevatorState)
 
 		case a := <-ch_obstr:
 			if a {
@@ -51,11 +54,13 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 			elevator.LightsElev(*e)
 		*/
 
-		case <-ch_timer:
+		case <-ch_timerDoor:
 			e.TimerCount -= 1
 			if e.TimerCount == 0 {
 				fsmOnDoorTimeout(e, ch_elevatorState)
 			}
+		case <-ch_timerUpdateState:
+			ch_elevatorState <- *e
 		}
 	}
 }
@@ -123,5 +128,6 @@ func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 			ch_elevatorState <- *e
 			break
 		}
+
 	}
 }
