@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// skal vi ha en global elev med requests også?
 elevators := make([]*config.DistributorElevator, 0)
 
 //Fuc to check if there are any hall orders
@@ -22,7 +21,6 @@ func hasOrders(elevState elevators) bool {
 
 //Watchdog - monitor that elevators are moving, if not assign to local elevator
 func watchdog(timeOutC chan<- bool, elevState chan<- elevators, timeout time.Duration) {
-	floorMap := make(map[string]int)
 	watchdogEnabled := false
 	watchdogTimer := time.NewTimer(timeout)
 
