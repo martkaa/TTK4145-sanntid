@@ -46,11 +46,11 @@ func printNewRequests(elevators []config.DistributorElevator) {
 func DistributorFsm(id string) {
 
 	/* Channels */
-	ch_newLocalOrder := make(chan elevio.ButtonEvent)
-	ch_newLocalState := make(chan elevator.Elevator)
-	ch_msgFromNetwork := make(chan []config.DistributorElevator)
-	ch_msgToNetwork := make(chan []config.DistributorElevator)
-	ch_orderToLocal := make(chan elevio.ButtonEvent)
+	ch_newLocalOrder := make(chan elevio.ButtonEvent, 100)
+	ch_newLocalState := make(chan elevator.Elevator, 100)
+	ch_msgFromNetwork := make(chan []config.DistributorElevator, 100)
+	ch_msgToNetwork := make(chan []config.DistributorElevator, 100)
+	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
 
 	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
 	go elevio.PollButtons(ch_newLocalOrder)
