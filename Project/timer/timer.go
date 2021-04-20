@@ -3,7 +3,7 @@ package timer
 import (
 	"time"
 
-	"../elevator"
+	"Project/elevator"
 )
 
 func TimerDoor(sec int, ch_timerDoor chan<- bool, e *elevator.Elevator) {

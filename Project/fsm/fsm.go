@@ -1,10 +1,10 @@
 package fsm
 
 import (
-	"../elevator"
-	"../elevio"
-	"../request"
-	"../timer"
+	"Project/elevator"
+	"Project/elevio"
+	"Project/request"
+	"Project/timer"
 )
 
 func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
@@ -17,13 +17,13 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	ch_stopButton := make(chan bool)
 
 	ch_timerDoor := make(chan bool)
-	ch_timerUpdateState := make(chan bool)
+	//ch_timerUpdateState := make(chan bool)
 
 	go elevio.PollFloorSensor(ch_arrivedAtFloors)
 	go elevio.PollObstructionSwitch(ch_obstr)
 	go elevio.PollStopButton(ch_stopButton)
 
-	go timer.TimerUpdateState(1000, ch_timerUpdateState)
+	//go timer.TimerUpdateState(1000, ch_timerUpdateState)
 
 	for {
 		elevator.LightsElev(*e)
@@ -59,8 +59,8 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 			if e.TimerCount == 0 {
 				fsmOnDoorTimeout(e, ch_elevatorState)
 			}
-		case <-ch_timerUpdateState:
-			ch_elevatorState <- *e
+			/*case <-ch_timerUpdateState:
+			ch_elevatorState <- *e*/
 		}
 	}
 }

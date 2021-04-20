@@ -1,12 +1,11 @@
 package peers
 
 import (
+	"Project/network/conn"
 	"fmt"
 	"net"
 	"sort"
 	"time"
-
-	"Project/network/conn"
 )
 
 type PeerUpdate struct {
