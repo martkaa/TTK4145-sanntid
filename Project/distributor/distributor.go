@@ -28,6 +28,7 @@ func broadcast(elevators []*config.DistributorElevator, ch_transmit chan<- []con
 	}
 	//for i := 0; i < 5; i++ {
 	ch_transmit <- tempElevators
+	time.Sleep(time.Millisecond * 50)
 	//}
 }
 
@@ -73,13 +74,11 @@ func DistributorFsm(id string) {
 			if elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] == config.Order {
 				//fmt.Println("Send a 1 before sending to local elevator")
 				broadcast(elevators, ch_msgToNetwork)
-				time.Sleep(time.Millisecond * 100)
 				elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] = config.Comfirmed
 				setHallLights(elevators)
 				ch_orderToLocal <- newOrder
 			}
 			broadcast(elevators, ch_msgToNetwork)
-			time.Sleep(time.Millisecond * 100)
 
 		case newState := <-ch_newLocalState:
 			//fmt.Println("New state")
@@ -88,12 +87,11 @@ func DistributorFsm(id string) {
 			//fmt.Println("set hall lights msg to network")
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
-			time.Sleep(time.Millisecond * 100)
 			removeCompletedOrders(elevators)
 
 		case newElevators := <-ch_msgFromNetwork:
 			fmt.Println(newElevators[0].ID)
-			printNewRequests(newElevators)
+			//printNewRequests(newElevators)
 			//fmt.Println("------------New above, updated below-------------")
 			updateElevators(elevators, newElevators)
 			printRequests(elevators)
@@ -107,7 +105,6 @@ func DistributorFsm(id string) {
 					Floor:  extractNewOrder.Floor}
 				ch_orderToLocal <- tempOrder
 				broadcast(elevators, ch_msgToNetwork)
-				time.Sleep(time.Millisecond * 100)
 			}
 		}
 	}
@@ -279,3 +276,18 @@ func setHallLights(elevators []*config.DistributorElevator) {
 		}
 	}
 }
+
+/* Error handeling:
+
+En type watchdog: peer-update
+1. Elevator lost connection
+2. Elevator lost power
+
+If missing
+	peer-update
+
+
+En type watchdog:
+3. Elevator motor stop / obstruction
+
+*/
