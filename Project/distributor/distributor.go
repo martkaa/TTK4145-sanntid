@@ -8,6 +8,7 @@ import (
 	"Project/fsm"
 	"Project/network/bcast"
 	"fmt"
+	"time"
 )
 
 const localElevator = 0
@@ -25,8 +26,20 @@ func broadcast(elevators []*config.DistributorElevator, ch_transmit chan<- []con
 	for _, elev := range elevators {
 		tempElevators = append(tempElevators, *elev)
 	}
-	for i := 0; i < 5; i++ {
-		ch_transmit <- tempElevators
+	//for i := 0; i < 5; i++ {
+	ch_transmit <- tempElevators
+	//}
+}
+
+func printRequests(elevators []*config.DistributorElevator) {
+	for _, elev := range elevators {
+		fmt.Println(elev.Requests)
+	}
+}
+
+func printNewRequests(elevators []config.DistributorElevator) {
+	for _, elev := range elevators {
+		fmt.Println(elev.Requests)
 	}
 }
 
@@ -48,32 +61,42 @@ func DistributorFsm(id string) {
 
 	/* Initialiaze elevator */
 	elevators := make([]*config.DistributorElevator, 0)
-	thisElevator := elevatorInit(id)
-	elevators = append(elevators, &thisElevator)
+	thisElevator := new(config.DistributorElevator)
+	*thisElevator = elevatorInit(id)
+	elevators = append(elevators, thisElevator)
 
 	for {
 		select {
 		case newOrder := <-ch_newLocalOrder:
-			fmt.Println("New Order")
+			//fmt.Println("New Order")
 			assignOrder(elevators, newOrder)
 			if elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] == config.Order {
+				//fmt.Println("Send a 1 before sending to local elevator")
+				broadcast(elevators, ch_msgToNetwork)
+				time.Sleep(time.Millisecond * 100)
 				elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] = config.Comfirmed
 				setHallLights(elevators)
 				ch_orderToLocal <- newOrder
 			}
 			broadcast(elevators, ch_msgToNetwork)
+			time.Sleep(time.Millisecond * 100)
 
 		case newState := <-ch_newLocalState:
-			fmt.Println("New state")
+			//fmt.Println("New state")
 			updateLocalState(elevators, newState)
 			checkLocalOrderComplete(elevators[localElevator], newState)
+			//fmt.Println("set hall lights msg to network")
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
+			time.Sleep(time.Millisecond * 100)
 			removeCompletedOrders(elevators)
 
 		case newElevators := <-ch_msgFromNetwork:
-			fmt.Println("New Network message")
+			fmt.Println(newElevators[0].ID)
+			printNewRequests(newElevators)
+			//fmt.Println("------------New above, updated below-------------")
 			updateElevators(elevators, newElevators)
+			printRequests(elevators)
 			addNewElevator(&elevators, newElevators)
 			extractNewOrder := comfirmNewOrder(elevators[localElevator])
 			setHallLights(elevators)
@@ -84,6 +107,7 @@ func DistributorFsm(id string) {
 					Floor:  extractNewOrder.Floor}
 				ch_orderToLocal <- tempOrder
 				broadcast(elevators, ch_msgToNetwork)
+				time.Sleep(time.Millisecond * 100)
 			}
 		}
 	}
@@ -110,13 +134,14 @@ func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEve
 
 	for _, elev := range elevators {
 		elevCost = cost.Cost(elev, order)
+		fmt.Println(elevCost)
 		if elevCost < minCost {
 			minCost = elevCost
 			minElev = elev
 		}
 	}
-	if minElev == elevators[localElevator] {
-		elevators[localElevator].Requests[order.Floor][order.Button] = config.Comfirmed
+	if minElev.ID == elevators[localElevator].ID {
+		elevators[localElevator].Requests[order.Floor][order.Button] = config.Order
 	} else {
 		minElev.Requests[order.Floor][order.Button] = config.Order
 	}
@@ -144,7 +169,6 @@ func updateLocalState(elevators []*config.DistributorElevator, elev elevator.Ele
 	elevators[localElevator].Dir = config.Direction(int(elev.Dir))
 }
 
-// Todo: How to handle complete cab orders?
 func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevator.Elevator) {
 	for floor := range elev.Requests {
 		for button := range elev.Requests[floor] {
@@ -155,36 +179,54 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 	}
 }
 
-func updateRequests(elev *config.DistributorElevator, newElev config.DistributorElevator) {
+/*
+	New message from network stuff
+*/
+
+func copyRequests(elev *config.DistributorElevator, newElev config.DistributorElevator) {
 	for floor := range elev.Requests {
-		for button := 0; button < len(elev.Requests[floor])-1; button++ {
-			if elev.Requests[floor][button] < newElev.Requests[floor][button] {
-				elev.Requests[floor][button] = newElev.Requests[floor][button]
-			}
+		for button := range elev.Requests[floor] {
+			elev.Requests[floor][button] = newElev.Requests[floor][button]
 		}
 	}
 }
 
-/*
-	New message from network stuff
-*/
 func updateElevators(elevators []*config.DistributorElevator, newElevators []config.DistributorElevator) {
-
-	//if newElevators[localElevator].ID != (*elevators)[localElevator].ID {
+	for _, elev := range elevators {
+		if elev.ID == newElevators[localElevator].ID {
+			*elev = newElevators[localElevator]
+		}
+	}
 	for _, newElev := range newElevators {
-		for _, elev := range elevators {
-			if elev.ID == newElev.ID {
-				updateRequests(elev, newElev)
-				if newElev.ID != elevators[localElevator].ID {
-					elev.Behave = newElev.Behave
-					elev.Dir = newElev.Dir
-					elev.Floor = newElev.Floor
+		if newElev.ID == elevators[localElevator].ID {
+			for floor := range newElev.Requests {
+				for button := range newElev.Requests[floor] {
+					if newElev.Requests[floor][button] == config.Order {
+						elevators[localElevator].Requests[floor][button] = config.Order
+					}
 				}
 			}
 		}
 	}
-	// }
 }
+
+/*	if newElevators[localElevator].ID != elevators[localElevator].ID {
+		for _, newElev := range newElevators {
+			for _, elev := range elevators {
+				isLocalElev := true
+				if elev.ID == newElev.ID {
+					if newElev.ID != elevators[localElevator].ID {
+						isLocalElev = false
+						elev.Behave = newElev.Behave
+						elev.Dir = newElev.Dir
+						elev.Floor = newElev.Floor
+					}
+					updateRequests(elev, newElev, isLocalElev)
+				}
+			}
+		}
+	}
+}*/
 
 func addNewElevator(elevators *[]*config.DistributorElevator, newElevators []config.DistributorElevator) {
 	for _, newElev := range newElevators {
@@ -201,7 +243,7 @@ func addNewElevator(elevators *[]*config.DistributorElevator, newElevators []con
 			(*tempElev).Behave = newElev.Behave
 			(*tempElev).Dir = newElev.Dir
 			(*tempElev).Floor = newElev.Floor
-			updateRequests(tempElev, newElev)
+			copyRequests(tempElev, newElev)
 			*elevators = append(*elevators, tempElev)
 		}
 	}
@@ -223,7 +265,6 @@ func comfirmNewOrder(elev *config.DistributorElevator) config.Request {
 		Button: config.HallUp}
 }
 
-// Må huske å skru av lysene når bestillingen er utført
 func setHallLights(elevators []*config.DistributorElevator) {
 	for _, elev := range elevators {
 		for floor := range elev.Requests {

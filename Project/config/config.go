@@ -38,8 +38,6 @@ const (
 	Cab      ButtonType = 2
 )
 
-
-
 type Request struct {
 	Floor  int
 	Button ButtonType
@@ -59,4 +57,3 @@ type CostRequest struct {
 	AssignedId string
 	Req        Request
 }
-
