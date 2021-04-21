@@ -75,10 +75,12 @@ func DistributorFsm(id string) {
 				//fmt.Println("Send a 1 before sending to local elevator")
 				broadcast(elevators, ch_msgToNetwork)
 				elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] = config.Comfirmed
+				//elevio.SetButtonLamp(elevio.ButtonType(newOrder.Button), newOrder.Floor, true)
 				setHallLights(elevators)
 				ch_orderToLocal <- newOrder
 			}
 			broadcast(elevators, ch_msgToNetwork)
+			time.Sleep(time.Microsecond * 50)
 
 		case newState := <-ch_newLocalState:
 			//fmt.Println("New state")
@@ -88,6 +90,7 @@ func DistributorFsm(id string) {
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
 			removeCompletedOrders(elevators)
+			time.Sleep(time.Microsecond * 50)
 
 		case newElevators := <-ch_msgFromNetwork:
 			fmt.Println(newElevators[0].ID)
@@ -106,6 +109,7 @@ func DistributorFsm(id string) {
 				ch_orderToLocal <- tempOrder
 				broadcast(elevators, ch_msgToNetwork)
 			}
+			time.Sleep(time.Microsecond * 50)
 		}
 	}
 }
@@ -115,12 +119,7 @@ func DistributorFsm(id string) {
 */
 
 func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEvent) {
-	if len(elevators) < 2 {
-		elevators[localElevator].Requests[order.Floor][order.Button] = config.Order
-		return
-	}
-
-	if order.Button == elevio.BT_Cab {
+	if len(elevators) < 2 || order.Button == elevio.BT_Cab {
 		elevators[localElevator].Requests[order.Floor][order.Button] = config.Order
 		return
 	}
@@ -137,11 +136,7 @@ func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEve
 			minElev = elev
 		}
 	}
-	if minElev.ID == elevators[localElevator].ID {
-		elevators[localElevator].Requests[order.Floor][order.Button] = config.Order
-	} else {
-		minElev.Requests[order.Floor][order.Button] = config.Order
-	}
+	minElev.Requests[order.Floor][order.Button] = config.Order
 }
 
 /*
@@ -171,6 +166,7 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 		for button := range elev.Requests[floor] {
 			if !localElev.Requests[floor][button] && elev.Requests[floor][button] == config.Comfirmed {
 				elev.Requests[floor][button] = config.Complete
+				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 			}
 		}
 	}
@@ -189,9 +185,11 @@ func copyRequests(elev *config.DistributorElevator, newElev config.DistributorEl
 }
 
 func updateElevators(elevators []*config.DistributorElevator, newElevators []config.DistributorElevator) {
-	for _, elev := range elevators {
-		if elev.ID == newElevators[localElevator].ID {
-			*elev = newElevators[localElevator]
+	if elevators[0].ID != newElevators[0].ID {
+		for _, elev := range elevators {
+			if elev.ID == newElevators[localElevator].ID {
+				*elev = newElevators[localElevator]
+			}
 		}
 	}
 	for _, newElev := range newElevators {
@@ -251,6 +249,7 @@ func comfirmNewOrder(elev *config.DistributorElevator) config.Request {
 		for button := 0; button < len(elev.Requests[floor])-1; button++ {
 			if elev.Requests[floor][button] == config.Order {
 				elev.Requests[floor][button] = config.Comfirmed
+				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
 				return config.Request{
 					Floor:  floor,
 					Button: config.ButtonType(button)}
@@ -263,16 +262,15 @@ func comfirmNewOrder(elev *config.DistributorElevator) config.Request {
 }
 
 func setHallLights(elevators []*config.DistributorElevator) {
-	for _, elev := range elevators {
-		for floor := range elev.Requests {
-			for button := 0; button < len(elev.Requests[floor])-1; button++ {
+	for button := 0; button < config.NumButtons-1; button++ {
+		for floor := 0; floor < config.NumFloors; floor++ {
+			isLight := false
+			for _, elev := range elevators {
 				if elev.Requests[floor][button] == config.Comfirmed {
-					elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
-				}
-				if elev.Requests[floor][button] == config.Complete {
-					elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
+					isLight = true
 				}
 			}
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, isLight)
 		}
 	}
 }

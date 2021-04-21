@@ -45,8 +45,6 @@ func InitElev() Elevator {
 func LightsElev(e Elevator) {
 	elevio.SetFloorIndicator(e.Floor)
 	for f := range e.Requests {
-		for r := range e.Requests[f] {
-			elevio.SetButtonLamp(elevio.ButtonType(r), f, e.Requests[f][r])
-		}
+		elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), f, e.Requests[f][elevio.BT_Cab])
 	}
 }

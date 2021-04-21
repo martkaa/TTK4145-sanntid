@@ -5,6 +5,7 @@ import (
 	"Project/elevio"
 	"Project/request"
 	"Project/timer"
+	"time"
 )
 
 func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
@@ -23,7 +24,7 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	go elevio.PollObstructionSwitch(ch_obstr)
 	go elevio.PollStopButton(ch_stopButton)
 
-	go timer.TimerUpdateState(1000, ch_timerUpdateState)
+	go timer.TimerUpdateState(2000, ch_timerUpdateState)
 
 	for {
 		elevator.LightsElev(*e)
@@ -61,6 +62,7 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 			}
 		case <-ch_timerUpdateState:
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 		}
 	}
 }
@@ -77,6 +79,7 @@ func fsmOnFloorArrival(e *elevator.Elevator, ch_timer chan<- bool, ch_elevatorSt
 			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
 			e.Behave = elevator.DoorOpen
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 		}
 	default:
 		break
@@ -93,9 +96,11 @@ func fsmOnDoorTimeout(e *elevator.Elevator, ch_elevatorState chan<- elevator.Ele
 		if e.Dir == elevio.MD_Stop {
 			e.Behave = elevator.Idle
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 		} else {
 			e.Behave = elevator.Moving
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 		}
 	default:
 		break
@@ -119,6 +124,7 @@ func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
 			e.Behave = elevator.DoorOpen
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 			break
 		} else {
 			e.Requests[btnFloor][int(btnType)] = true
@@ -126,6 +132,7 @@ func fsmOnRequestButtonPress(btnFloor int, btnType elevio.ButtonType, e *elevato
 			elevio.SetMotorDirection(e.Dir)
 			e.Behave = elevator.Moving
 			ch_elevatorState <- *e
+			time.Sleep(time.Millisecond * 50)
 			break
 		}
 
