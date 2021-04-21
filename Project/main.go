@@ -33,6 +33,7 @@ func main() {
 	ch_msgToNetwork := make(chan []config.DistributorElevator, 100)
 	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
 	ch_peerUpdate := make(chan peers.PeerUpdate)
+	ch_peerTxEnable := make(chan bool)
 
 	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
 	go elevio.PollButtons(ch_newLocalOrder)
@@ -40,6 +41,9 @@ func main() {
 	/* Functions for network communication */
 	go bcast.Transmitter(16568, ch_msgToNetwork)
 	go bcast.Receiver(16568, ch_msgFromNetwork)
+
+	go peers.Transmitter(15647, id, ch_peerTxEnable)
+	go peers.Receiver(15647, ch_peerUpdate)
 
 	// Tenker at main blir den delen som "binder" sammen de forskjellige delene ved å lage forskjellige
 	// kanaler og sende de inn i forskjellige go-rutiner.

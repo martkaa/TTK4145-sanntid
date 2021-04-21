@@ -62,18 +62,15 @@ func DistributorFsm(
 	for {
 		select {
 		case newOrder := <-ch_newLocalOrder:
-			//fmt.Println("New Order")
 			assignOrder(elevators, newOrder)
 			if elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] == config.Order {
-				//fmt.Println("Send a 1 before sending to local elevator")
 				broadcast(elevators, ch_msgToNetwork)
 				elevators[localElevator].Requests[newOrder.Floor][newOrder.Button] = config.Comfirmed
-				//elevio.SetButtonLamp(elevio.ButtonType(newOrder.Button), newOrder.Floor, true)
 				setHallLights(elevators)
 				ch_orderToLocal <- newOrder
 			}
 			broadcast(elevators, ch_msgToNetwork)
-			time.Sleep(time.Microsecond * 50)
+			setHallLights(elevators)
 
 		case newState := <-ch_newLocalState:
 			if newState.Floor != elevators[localElevator].Floor ||
@@ -84,18 +81,14 @@ func DistributorFsm(
 				elevators[localElevator].Dir = config.Direction(int(newState.Dir))
 			}
 			checkLocalOrderComplete(elevators[localElevator], newState)
-			//fmt.Println("set hall lights msg to network")
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
 			removeCompletedOrders(elevators)
-			time.Sleep(time.Microsecond * 50)
 
 		case newElevators := <-ch_msgFromNetwork:
 			fmt.Println(newElevators[0].ID)
-			//printNewRequests(newElevators)
-			//fmt.Println("------------New above, updated below-------------")
 			updateElevators(elevators, newElevators)
-			printRequests(elevators)
+			//printRequests(elevators)
 			addNewElevator(&elevators, newElevators)
 			extractNewOrder := comfirmNewOrder(elevators[localElevator])
 			setHallLights(elevators)
@@ -107,20 +100,21 @@ func DistributorFsm(
 				ch_orderToLocal <- tempOrder
 				broadcast(elevators, ch_msgToNetwork)
 			}
-			time.Sleep(time.Microsecond * 50)
 		case peer := <-ch_peerUpdate:
+			fmt.Println(peer)
 			if len(peer.Lost) != 0 {
-				for intLostID := range peer.Lost {
+				for _, stringLostID := range peer.Lost {
 					for _, elev := range elevators {
-						if strconv.Itoa(intLostID) == elev.ID {
+						if stringLostID == elev.ID {
 							elev.Behave = config.Unavailable
 						}
 					}
-					stringLostID := strconv.Itoa(intLostID)
+					stringLostID := stringLostID
 					reassignOrders(elevators, stringLostID, ch_newLocalOrder)
 				}
 			}
-
+			setHallLights(elevators)
+			broadcast(elevators, ch_msgToNetwork)
 		}
 	}
 }
@@ -200,13 +194,15 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 				*elev = newElevators[localElevator]
 			}
 		}
-	}
-	for _, newElev := range newElevators {
-		if newElev.ID == elevators[localElevator].ID {
-			for floor := range newElev.Requests {
-				for button := range newElev.Requests[floor] {
-					if newElev.Requests[floor][button] == config.Order {
-						elevators[localElevator].Requests[floor][button] = config.Order
+		for _, newElev := range newElevators {
+			if newElev.ID == elevators[localElevator].ID {
+				if elevators[localElevator].Behave != config.Unavailable {
+					for floor := range newElev.Requests {
+						for button := range newElev.Requests[floor] {
+							if newElev.Requests[floor][button] == config.Order {
+								elevators[localElevator].Requests[floor][button] = config.Order
+							}
+						}
 					}
 				}
 			}
@@ -292,12 +288,14 @@ func reassignOrders(elevators []*config.DistributorElevator, errorID string, ch_
 			ID, _ := strconv.Atoi(elev.ID)
 			if ID < lowestID && elev.ID != errorID {
 				lowestID = ID
+				fmt.Println("The elevator with lowest ID is ", lowestID)
 			}
 			if elev.ID == errorID {
 				lostElev = elev
+				fmt.Println("The lost elev is ", lostElev.ID)
 			}
 		}
-		if elevators[0].ID == strconv.Itoa(lowestID) {
+		if elevators[localElevator].ID == strconv.Itoa(lowestID) {
 			for floor := range lostElev.Requests {
 				for button := 0; button < len(lostElev.Requests[floor])-1; button++ {
 					if lostElev.Requests[floor][button] == config.Order ||
