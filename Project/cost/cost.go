@@ -11,38 +11,40 @@ const TRAVEL_TIME = 10
 const NumElevators = 4
 
 func Cost(elev *config.DistributorElevator, req elevio.ButtonEvent) int {
-	e := new(config.DistributorElevator)
-	*e = *elev
-	e.Requests[req.Floor][req.Button] = config.Comfirmed
+	if elev.Behave != config.Unavailable {
+		e := new(config.DistributorElevator)
+		*e = *elev
+		e.Requests[req.Floor][req.Button] = config.Comfirmed
 
-	duration := 0
+		duration := 0
 
-	switch e.Behave {
-	case config.Idle:
-		requestChooseDirection(e)
-		if e.Dir == config.Stop {
-			return duration
-		}
-	case config.Moving:
-		duration += TRAVEL_TIME / 2
-		e.Floor += int(e.Dir)
-	case config.DoorOpen:
-		duration -= elevator.DoorOpenDuration / 2
-	}
-
-	for {
-		if requestShouldStop(*e) {
-			requestClearAtCurrentFloor(e)
-			duration += elevator.DoorOpenDuration
+		switch e.Behave {
+		case config.Idle:
 			requestChooseDirection(e)
 			if e.Dir == config.Stop {
 				return duration
 			}
+		case config.Moving:
+			duration += TRAVEL_TIME / 2
+			e.Floor += int(e.Dir)
+		case config.DoorOpen:
+			duration -= elevator.DoorOpenDuration / 2
 		}
-		e.Floor += int(e.Dir)
-		duration += TRAVEL_TIME
-	}
 
+		for {
+			if requestShouldStop(*e) {
+				requestClearAtCurrentFloor(e)
+				duration += elevator.DoorOpenDuration
+				requestChooseDirection(e)
+				if e.Dir == config.Stop {
+					return duration
+				}
+			}
+			e.Floor += int(e.Dir)
+			duration += TRAVEL_TIME
+		}
+	}
+	return 999
 }
 
 func requestsAbove(elev config.DistributorElevator) bool {
