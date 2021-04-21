@@ -3,9 +3,14 @@ package main
 import (
 	"flag"
 
+	"Project/config"
 	"Project/distributor"
-
+	"Project/elevator"
 	"Project/elevio"
+	"Project/fsm"
+	"Project/network/bcast"
+	"Project/network/peers"
+	"Project/watchdog"
 )
 
 func main() {
@@ -21,14 +26,49 @@ func main() {
 
 	elevio.Init("localhost:"+port, 4)
 
-	finished := make(chan int)
+	/* Channels */
+	ch_peerUpdate := make(chan peers.PeerUpdate)
+	ch_peerTxEnable := make(chan bool)
+	ch_newLocalOrder := make(chan elevio.ButtonEvent, 100)
+	ch_newLocalState := make(chan elevator.Elevator, 100)
+	ch_msgFromNetwork := make(chan []config.DistributorElevator, 100)
+	ch_msgToNetwork := make(chan []config.DistributorElevator, 100)
+	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
+	ch_watchdogElevatorStuck := make(chan bool, 100)
+	ch_watchdogLostConnection := make(chan string, 100)
+	ch_resetWatchdogLostConnection := make(chan string, 100)
+	ch_elevStuck := make(chan bool, 1)
+
+	go peers.Transmitter(15647, id, ch_peerTxEnable)
+	go peers.Receiver(15647, ch_peerUpdate)
+
+	/* Functions for network communication */
+	go bcast.Transmitter(16568, ch_msgToNetwork)
+	go bcast.Receiver(16568, ch_msgFromNetwork)
+
+	lostConnectionTimer := 5
+	go watchdog.WatchdogLostConnection(lostConnectionTimer, ch_peerUpdate, ch_resetWatchdogLostConnection, ch_watchdogLostConnection)
+	elevatorStuckTimer := 10
+	go watchdog.WatchdogElevatorStuck(elevatorStuckTimer, ch_elevStuck, ch_watchdogElevatorStuck)
+
+	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
+	go elevio.PollButtons(ch_newLocalOrder)
 
 	// Tenker at main blir den delen som "binder" sammen de forskjellige delene ved å lage forskjellige
 	// kanaler og sende de inn i forskjellige go-rutiner.
 
-	go distributor.DistributorFsm(id)
+	go distributor.DistributorFsm(
+		id,
+		ch_newLocalOrder,
+		ch_newLocalState,
+		ch_msgFromNetwork,
+		ch_msgToNetwork,
+		ch_orderToLocal,
+		ch_watchdogLostConnection,
+		ch_watchdogElevatorStuck,
+		ch_elevStuck)
 
-	<-finished
+	select {}
 	//Init watchdog
 	/*
 		watchdogTimeoutC := make(chan bool)

@@ -1,11 +1,64 @@
 package watchdog
 
-/*
 import (
+	"Project/network/peers"
 	"time"
 )
 
-elevators := make([]*config.DistributorElevator, 0)
+func WatchdogLostConnection(seconds int, ch_peerUpdate chan peers.PeerUpdate, ch_resetWatchdog chan string, ch_watchdogLostConnection chan string) {
+	for {
+		peer := <-ch_peerUpdate
+		if peer.New != "" {
+			go watchdog(peer.New, seconds, ch_resetWatchdog, ch_watchdogLostConnection)
+		}
+		for _, ID := range peer.Peers {
+			for range peer.Peers {
+				ch_resetWatchdog <- ID
+			}
+		}
+	}
+}
+
+func WatchdogElevatorStuck(seconds int, ch_elevStuck chan bool, ch_watchdogElevatorStuck chan bool) {
+	counter := 0
+	for {
+		time.Sleep(time.Second)
+		select {
+		case elevStuck := <-ch_elevStuck:
+			if !elevStuck {
+				counter = 0
+			}
+		default:
+			counter += 1
+			if counter == seconds {
+				ch_watchdogElevatorStuck <- true
+				return
+			}
+		}
+	}
+}
+
+func watchdog(ID string, seconds int, ch_resetWatchdog chan string, ch_watchdogAlarm chan string) {
+	counter := 0
+	for {
+		time.Sleep(time.Second)
+		select {
+		case watchdogID := <-ch_resetWatchdog:
+			if watchdogID == ID {
+				counter = 0
+			}
+		default:
+			counter += 1
+			if counter == seconds {
+				ch_watchdogAlarm <- ID
+				return
+			}
+		}
+	}
+}
+
+/*secondsseconds
+
 
 //Fuc to check if there are any hall orders
 func hasOrders(elevState elevators) bool {

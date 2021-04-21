@@ -25,9 +25,10 @@ const (
 type Behaviour int
 
 const (
-	Idle     Behaviour = 0
-	DoorOpen Behaviour = 1
-	Moving   Behaviour = 2
+	Idle      Behaviour = 0
+	DoorOpen  Behaviour = 1
+	Moving    Behaviour = 2
+	MotorStop Behaviour = 3
 )
 
 type ButtonType int
