@@ -246,7 +246,7 @@ func addNewElevator(elevators *[]*config.DistributorElevator, newElevators []con
 
 func comfirmNewOrder(elev *config.DistributorElevator) config.Request {
 	for floor := range elev.Requests {
-		for button := 0; button < len(elev.Requests[floor])-1; button++ {
+		for button := 0; button < len(elev.Requests[floor]); button++ {
 			if elev.Requests[floor][button] == config.Order {
 				elev.Requests[floor][button] = config.Comfirmed
 				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
