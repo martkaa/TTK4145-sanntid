@@ -16,14 +16,14 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	elevio.SetDoorOpenLamp(false)
 
 	ch_arrivedAtFloors := make(chan int)
-	ch_obstr := make(chan bool)
+	ch_obstruction := make(chan bool)
 	ch_stopButton := make(chan bool)
 
 	ch_timerDoor := make(chan bool)
 	ch_timerUpdateState := make(chan bool)
 
 	go elevio.PollFloorSensor(ch_arrivedAtFloors)
-	go elevio.PollObstructionSwitch(ch_obstr)
+	go elevio.PollObstructionSwitch(ch_obstruction)
 	go elevio.PollStopButton(ch_stopButton)
 
 	go timer.TimerUpdateState(500, ch_timerUpdateState)
@@ -41,6 +41,9 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	}
 	ch_elevatorState <- *e
 
+	doorTimer := time.NewTimer(time.Duration(elevator.DoorOpenDuration) * time.Second)
+	doorTimer.Stop()
+
 	for {
 		elevator.LightsElev(*e)
 
@@ -51,39 +54,24 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 		// Alt under her er bare avhengig av heisens interne ting
 		case f := <-ch_arrivedAtFloors:
 			e.Floor = f
-			fsmOnFloorArrival(e, ch_timerDoor, ch_elevatorState)
-
-		case a := <-ch_obstr:
-			if a {
-				elevio.SetMotorDirection(elevio.MD_Stop)
-			} else {
-				elevio.SetMotorDirection(e.Dir)
-			}
-		/*case a := <-ch_stopButton:
-		fmt.Printf("%+v\n", a)
-		request.RequestClearAll(e)
-		e.Dir = elevio.MD_Stop
-		e.Behave = elevator.Idle
-		elevio.SetMotorDirection(e.Dir)
-		elevio.SetDoorOpenLamp(false)
-		elevator.LightsElev(*e)*/
-
-		case <-ch_timerDoor:
-			e.TimerCount -= 1
-			if e.TimerCount == 0 {
-				fsmOnDoorTimeout(e, ch_elevatorState)
-			}
+			fsmOnFloorArrival(e, ch_timerDoor, ch_elevatorState, doorTimer)
+		case <-doorTimer.C:
+			fsmOnDoorTimeout(e, ch_elevatorState)
 		case <-ch_timerUpdateState:
 			ch_elevatorState <- *e
 			time.Sleep(time.Millisecond * 50)
 		case <-ch_clearLocalHallOrders:
 			request.RequestClearHall(e)
+		case obstruction := <-ch_obstruction:
+			if e.Behave == elevator.DoorOpen && obstruction {
+				doorTimer.Reset(time.Duration(elevator.DoorOpenDuration) * time.Second)
+			}
 		}
 
 	}
 }
 
-func fsmOnFloorArrival(e *elevator.Elevator, ch_timer chan<- bool, ch_elevatorState chan<- elevator.Elevator) {
+func fsmOnFloorArrival(e *elevator.Elevator, ch_timer chan<- bool, ch_elevatorState chan<- elevator.Elevator, doorTimer *time.Timer) {
 
 	switch {
 	case e.Behave == elevator.Moving:
@@ -92,7 +80,7 @@ func fsmOnFloorArrival(e *elevator.Elevator, ch_timer chan<- bool, ch_elevatorSt
 			elevator.LightsElev(*e)
 			request.RequestClearAtCurrentFloor(e)
 			elevio.SetDoorOpenLamp(true)
-			go timer.TimerDoor(elevator.DoorOpenDuration, ch_timer, e)
+			doorTimer.Reset(time.Duration(elevator.DoorOpenDuration) * time.Second)
 			e.Behave = elevator.DoorOpen
 			ch_elevatorState <- *e
 			time.Sleep(time.Millisecond * 50)
