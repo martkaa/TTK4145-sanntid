@@ -149,10 +149,6 @@ func DistributorFsm(
 	}
 }
 
-/*
-	New local state stuff
-*/
-
 func removeCompletedOrders(elevators []*config.DistributorElevator) {
 	for _, elev := range elevators {
 		for floor := range elev.Requests {
@@ -184,10 +180,6 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 		}
 	}
 }
-
-/*
-	New message from network stuff
-*/
 
 func copyRequests(elev *config.DistributorElevator, newElev config.DistributorElevator) {
 	for floor := range elev.Requests {
