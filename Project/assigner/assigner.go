@@ -23,7 +23,6 @@ func ReassignOrders(elevators []*config.DistributorElevator, ch_newLocalOrder ch
 				for button := 0; button < len(elev.Requests[floor])-1; button++ {
 					if elev.Requests[floor][button] == config.Order ||
 						elev.Requests[floor][button] == config.Comfirmed {
-						elev.Requests[floor][button] = config.None
 						if elevators[config.LocalElevator].ID == strconv.Itoa(lowestID) {
 							ch_newLocalOrder <- elevio.ButtonEvent{
 								Floor:  floor,

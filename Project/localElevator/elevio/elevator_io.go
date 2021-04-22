@@ -8,6 +8,7 @@ import (
 )
 
 const _pollRate = 20 * time.Millisecond
+const _pollRateObstruction = 100 * time.Millisecond
 
 var _initialized bool = false
 var _numFloors int = 4
@@ -121,14 +122,10 @@ func PollStopButton(receiver chan<- bool) {
 }
 
 func PollObstructionSwitch(receiver chan<- bool) {
-	prev := false
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(_pollRateObstruction)
 		v := getObstruction()
-		if v != prev {
-			receiver <- v
-		}
-		prev = v
+		receiver <- v
 	}
 }
 
