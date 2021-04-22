@@ -9,6 +9,7 @@ import (
 	"Project/fsm"
 	"Project/network/bcast"
 	"Project/network/peers"
+	"Project/watchdog"
 
 	"Project/elevio"
 )
@@ -34,6 +35,8 @@ func main() {
 	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
 	ch_peerUpdate := make(chan peers.PeerUpdate)
 	ch_peerTxEnable := make(chan bool)
+	ch_watchdogElevatorStuck := make(chan bool)
+	ch_elevStuck := make(chan bool)
 
 	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
 	go elevio.PollButtons(ch_newLocalOrder)
@@ -45,6 +48,8 @@ func main() {
 	go peers.Transmitter(15647, id, ch_peerTxEnable)
 	go peers.Receiver(15647, ch_peerUpdate)
 
+	go watchdog.WatchdogElevatorStuck(5, ch_elevStuck, ch_watchdogElevatorStuck)
+
 	// Tenker at main blir den delen som "binder" sammen de forskjellige delene ved å lage forskjellige
 	// kanaler og sende de inn i forskjellige go-rutiner.
 
@@ -55,7 +60,9 @@ func main() {
 		ch_msgFromNetwork,
 		ch_msgToNetwork,
 		ch_orderToLocal,
-		ch_peerUpdate)
+		ch_peerUpdate,
+		ch_watchdogElevatorStuck,
+		ch_elevStuck)
 
 	select {}
 	//Init watchdog

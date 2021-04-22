@@ -1,6 +1,39 @@
+Elevator Project - TTK4145 Sanntidsprogrammering
+================
+
+### README som skal lev
+Summary
+-------
+The task for this project was to create software for controlling `n` elevators working in parallel across `m` floors. We used a floating master with peer to peer and UDP bradcast to solve this problem.
+
+Requirements
+-----------------
+There were some requirements for the elevator's behaviour. These are summarized in points below.
+**- No orders are lost**
+  * Should handle errors like packet loss, losing network connection entirely, software that crashes, and losing power for both hall and cab orders
+**- Multiple elevators should be more efficient than one**
+  * All about communication and distributing to the most suitable elevator
+**- An individual elevator should behave sensibly and efficiently**
+  * As we implemented in TTK4235
+**- The lights and buttons should function as expected**
+
+The software should work for `n`elevators across `m`floors, however the system was not tested on `n > 3` or `m != 4` due to the properties of the simulator and elevator on the "Sanntidslab". 
+
+There were some permitted assumptions:
+**- At least one elevator is always working normally**
+**- No multiple simultaneous errors: Only one error happens at a time, but the system must still return to a fully operational state after this error**
+    **- Recall that network packet loss is *not* an error in this context, and must be considered regardless of any other (single) error that can occur**
+**- No network partitioning: There will never be a situation where there are multiple sets of two or more elevators with no connection between them**
+**- Cab call redundancy with a single elevator is not required**
+  **- Given assumptions **1** and **2**, a system containing only one elevator is assumed to be unable to fail**
+
+Ferdig README
+-------------
+
 Elevator Project
 ================
 
+Our elevator is based on peer to peer using UDP broadcast. The delegation of orders is handled by a floating master
 
 Summary
 -------

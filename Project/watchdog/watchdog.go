@@ -1,5 +1,9 @@
 package watchdog
 
+import (
+	"time"
+)
+
 /*
 import (
 	"time"
@@ -52,4 +56,20 @@ func watchdog(timeOutC chan<- bool, elevState chan<- elevators, timeout time.Dur
 		}
 	}
 }
+
 */
+
+func WatchdogElevatorStuck(seconds int, ch_elevStuck chan bool, ch_watchdogElevatorStuck chan bool) {
+	watchdogTimer := time.NewTimer(time.Duration(seconds) * time.Second)
+	for {
+		select {
+		case elevStuck := <-ch_elevStuck:
+			if !elevStuck {
+				watchdogTimer.Reset(time.Duration(seconds) * time.Second)
+			}
+		case <-watchdogTimer.C:
+			ch_watchdogElevatorStuck <- true
+			watchdogTimer.Reset(time.Duration(seconds) * time.Second)
+		}
+	}
+}
