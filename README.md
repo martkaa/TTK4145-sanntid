@@ -38,11 +38,11 @@ We wrote our solution in `GoLang`. We found that the channel feature together wi
 
 **Feeting master**
 
-The elevator that recieves an order calculates the cost of every elevator based on their states. This solution will handle the event of network loss of a node, such that as long as there exists elevators, the orders will always be delegated to the most suitible node.
+The elevator that recieves an external order calculates the cost of every elevator based on their states. This decition as well as the order is broadcasted to the network where all other elevators This solution will handle the event of network loss of a node, such that as long as there exists elevators, the orders will always be delegated to the most suitible node.
 
 **UDP broadcast**
 
-The idea to broadcast everything all the time will support our fleeting master, as opposed to a TCP wich requires a hand shake protocol. Backup and restore of orders in case of network loss and power loss is also easy to handle with UDP. Every massage is ID'ed to differentiate between the messages.
+The idea to broadcast everything all the time will support our fleeting master, as opposed to a TCP wich requires a hand shake protocol. This means that every elevator knows everyone's states and orders at all times. Backup and restore of orders in case of network loss and power loss is also easy to handle with UDP. Every massage is ID'ed to differentiate between the messages. 
 
 Simulator
 ---------
