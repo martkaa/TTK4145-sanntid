@@ -172,7 +172,6 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 		for button := range elev.Requests[floor] {
 			if !localElev.Requests[floor][button] && elev.Requests[floor][button] == config.Comfirmed {
 				elev.Requests[floor][button] = config.Complete
-				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 			}
 			if localElev.Requests[floor][button] && elev.Requests[floor][button] != config.Comfirmed && elev.Behave != config.Unavailable {
 				elev.Requests[floor][button] = config.Comfirmed
@@ -207,12 +206,14 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 		}
 		for _, newElev := range newElevators {
 			if newElev.ID == elevators[localElevator].ID {
-				if elevators[localElevator].Behave != config.Unavailable {
-					for floor := range newElev.Requests {
-						for button := range newElev.Requests[floor] {
+				for floor := range newElev.Requests {
+					for button := range newElev.Requests[floor] {
+						if elevators[localElevator].Behave != config.Unavailable {
 							if newElev.Requests[floor][button] == config.Order {
 								(*elevators[localElevator]).Requests[floor][button] = config.Order
 							}
+						} else {
+							elevators[localElevator].Requests[floor][button] = config.None
 						}
 					}
 				}
