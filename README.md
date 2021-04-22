@@ -38,11 +38,11 @@ We wrote our solution program in `GoLang`. We found that the channel feature tog
 
 The elevator that recieves an external order calculates the cost of every elevator based on their states, and thereby delegates the order to the most suitable elevator. This decition as well as the order is broadcasted to the network. This solution will handle the event of network loss of a node, such that as long as there exists elevators, the orders will always be redelegated to the most suitible node.
 
+When an order is distributed, it is implicity acknowledged by the other elevators. Network loss will cause the connected elevatoros to reassign the orders of the lost elevator, and the disconnected elevator will go on as a individual elevator.
+
 **UDP broadcast**
 
 The idea to broadcast everything all the time will support our fleeting master, as opposed to a TCP wich requires a hand shake protocol. This means that every elevator knows everyone's states and orders at all times. Backup and restore of orders in case of network loss and power loss is also easy to handle with UDP. Every massage is ID'ed to differentiate between the messages.
-
-When an order is distributed, it is implicity acknowledged by the other elevators. Network loss will cause the connected elevatoros to reassign the orders of the lost elevator, and the disconnected elevator will go on as a individual elevator.
 
 The system perfomed great. For example packet loss is not a problem due to the continous spam of packets. However, there are improvements that could be done to enhance the readability of the program and code. One module tured out to be a "fix-it-all", and could be modifid to enhance the neatness of the system.
 
