@@ -79,9 +79,9 @@ func RequestChooseDirection(e *elevator.Elevator) {
 
 }
 
-func RequestClearAll(e *elevator.Elevator) {
+func RequestClearHall(e *elevator.Elevator) {
 	for f := 0; f < elevator.NumFloors; f++ {
-		for btn := 0; btn < elevator.NumButtons; btn++ {
+		for btn := 0; btn < elevator.NumButtons-1; btn++ {
 			e.Requests[f][btn] = false
 		}
 	}

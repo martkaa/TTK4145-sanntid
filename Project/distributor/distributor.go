@@ -17,7 +17,6 @@ func elevatorInit(id string) config.DistributorElevator {
 	for floor := range requests {
 		requests[floor] = make([]config.RequestState, 3)
 	}
-	requests[0][config.Cab] = config.Order
 	return config.DistributorElevator{Requests: requests, ID: id, Floor: 0, Behave: config.Idle}
 }
 
@@ -26,10 +25,8 @@ func broadcast(elevators []*config.DistributorElevator, ch_transmit chan<- []con
 	for _, elev := range elevators {
 		tempElevators = append(tempElevators, *elev)
 	}
-	//for i := 0; i < 5; i++ {
 	ch_transmit <- tempElevators
 	time.Sleep(time.Millisecond * 50)
-	//}
 }
 
 func printRequests(elevators []*config.DistributorElevator) {
@@ -53,7 +50,8 @@ func DistributorFsm(
 	ch_orderToLocal chan elevio.ButtonEvent,
 	ch_peerUpdate chan peers.PeerUpdate,
 	ch_watchdogElevatorStuck chan bool,
-	ch_elevStuck chan bool) {
+	ch_elevStuck chan bool,
+	ch_clearLocalHallOrders chan bool) {
 
 	/* Initialiaze elevator */
 	elevators := make([]*config.DistributorElevator, 0)
@@ -105,7 +103,6 @@ func DistributorFsm(
 			} else {
 				ch_elevStuck <- true
 			}
-			fmt.Println(newState.Behave)
 			checkLocalOrderComplete(elevators[localElevator], newState)
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
@@ -113,7 +110,6 @@ func DistributorFsm(
 
 		case newElevators := <-ch_msgFromNetwork:
 			updateElevators(elevators, newElevators)
-			//printRequests(elevators)
 			assigner.ReassignOrders(elevators, ch_newLocalOrder)
 			addNewElevator(&elevators, newElevators)
 			extractNewOrder := comfirmNewOrder(elevators[localElevator])
@@ -140,7 +136,6 @@ func DistributorFsm(
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
 		case <-ch_watchdogElevatorStuck:
-			fmt.Println("I am actually stuck")
 			elevators[localElevator].Behave = config.Unavailable
 			broadcast(elevators, ch_msgToNetwork)
 			for floor := range elevators[localElevator].Requests {
@@ -149,6 +144,7 @@ func DistributorFsm(
 				}
 			}
 			setHallLights(elevators)
+			ch_clearLocalHallOrders <- true
 		}
 	}
 }

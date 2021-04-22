@@ -36,8 +36,9 @@ func main() {
 	ch_peerTxEnable := make(chan bool)
 	ch_watchdogElevatorStuck := make(chan bool)
 	ch_elevStuck := make(chan bool)
+	ch_clearLocalHallOrders := make(chan bool)
 
-	go fsm.Fsm(ch_orderToLocal, ch_newLocalState)
+	go fsm.Fsm(ch_orderToLocal, ch_newLocalState, ch_clearLocalHallOrders)
 	go elevio.PollButtons(ch_newLocalOrder)
 
 	/* Functions for network communication */
@@ -61,7 +62,8 @@ func main() {
 		ch_orderToLocal,
 		ch_peerUpdate,
 		ch_watchdogElevatorStuck,
-		ch_elevStuck)
+		ch_elevStuck,
+		ch_clearLocalHallOrders)
 
 	select {}
 	//Init watchdog

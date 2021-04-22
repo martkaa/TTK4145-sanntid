@@ -5,14 +5,15 @@ import (
 	"Project/localElevator/elevio"
 	"Project/localElevator/request"
 	"Project/localElevator/timer"
-	"fmt"
 	"time"
 )
 
-func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator) {
+func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.Elevator, ch_clearLocalHallOrders chan bool) {
 	elev := elevator.InitElev()
 
 	e := &elev
+
+	elevio.SetDoorOpenLamp(false)
 
 	ch_arrivedAtFloors := make(chan int)
 	ch_obstr := make(chan bool)
@@ -26,6 +27,19 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 	go elevio.PollStopButton(ch_stopButton)
 
 	go timer.TimerUpdateState(500, ch_timerUpdateState)
+
+	elevio.SetMotorDirection(elevio.MD_Down)
+
+	for {
+		floor := <-ch_arrivedAtFloors
+		if floor != 0 {
+			elevio.SetMotorDirection(elevio.MD_Down)
+		} else {
+			elevio.SetMotorDirection(elevio.MD_Stop)
+			break
+		}
+	}
+	ch_elevatorState <- *e
 
 	for {
 		elevator.LightsElev(*e)
@@ -45,14 +59,14 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 			} else {
 				elevio.SetMotorDirection(e.Dir)
 			}
-		case a := <-ch_stopButton:
-			fmt.Printf("%+v\n", a)
-			request.RequestClearAll(e)
-			e.Dir = elevio.MD_Stop
-			e.Behave = elevator.Idle
-			elevio.SetMotorDirection(e.Dir)
-			elevio.SetDoorOpenLamp(false)
-			elevator.LightsElev(*e)
+		/*case a := <-ch_stopButton:
+		fmt.Printf("%+v\n", a)
+		request.RequestClearAll(e)
+		e.Dir = elevio.MD_Stop
+		e.Behave = elevator.Idle
+		elevio.SetMotorDirection(e.Dir)
+		elevio.SetDoorOpenLamp(false)
+		elevator.LightsElev(*e)*/
 
 		case <-ch_timerDoor:
 			e.TimerCount -= 1
@@ -62,7 +76,10 @@ func Fsm(ch_orderChan chan elevio.ButtonEvent, ch_elevatorState chan<- elevator.
 		case <-ch_timerUpdateState:
 			ch_elevatorState <- *e
 			time.Sleep(time.Millisecond * 50)
+		case <-ch_clearLocalHallOrders:
+			request.RequestClearHall(e)
 		}
+
 	}
 }
 

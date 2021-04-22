@@ -4,7 +4,6 @@ import (
 	"Project/assigner/cost"
 	"Project/config"
 	"Project/localElevator/elevio"
-	"fmt"
 	"strconv"
 )
 
@@ -18,7 +17,6 @@ func ReassignOrders(elevators []*config.DistributorElevator, ch_newLocalOrder ch
 			}
 		}
 	}
-	fmt.Println("The elevator with lowest ID is ", lowestID)
 	for _, elev := range elevators {
 		if elev.Behave == config.Unavailable {
 			for floor := range elev.Requests {
