@@ -1,9 +1,9 @@
 package assigner
 
 import (
+	"Project/assigner/cost"
 	"Project/config"
-	"Project/cost"
-	"Project/elevio"
+	"Project/localElevator/elevio"
 	"fmt"
 	"strconv"
 )

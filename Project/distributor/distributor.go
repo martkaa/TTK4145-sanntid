@@ -3,8 +3,8 @@ package distributor
 import (
 	"Project/assigner"
 	"Project/config"
-	"Project/elevator"
-	"Project/elevio"
+	"Project/localElevator/elevator"
+	"Project/localElevator/elevio"
 	"Project/network/peers"
 	"fmt"
 	"time"
@@ -17,6 +17,7 @@ func elevatorInit(id string) config.DistributorElevator {
 	for floor := range requests {
 		requests[floor] = make([]config.RequestState, 3)
 	}
+	requests[0][config.Cab] = config.Order
 	return config.DistributorElevator{Requests: requests, ID: id, Floor: 0, Behave: config.Idle}
 }
 

@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	"Project/elevio"
+	"Project/localElevator/elevio"
 )
 
 const NumFloors = 4

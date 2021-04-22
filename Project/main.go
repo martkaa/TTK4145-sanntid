@@ -5,13 +5,12 @@ import (
 
 	"Project/config"
 	"Project/distributor"
-	"Project/elevator"
-	"Project/fsm"
+	"Project/localElevator/elevator"
+	"Project/localElevator/elevio"
+	"Project/localElevator/fsm"
 	"Project/network/bcast"
 	"Project/network/peers"
 	"Project/watchdog"
-
-	"Project/elevio"
 )
 
 func main() {

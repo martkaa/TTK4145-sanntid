@@ -1,10 +1,10 @@
 package fsm
 
 import (
-	"Project/elevator"
-	"Project/elevio"
-	"Project/request"
-	"Project/timer"
+	"Project/localElevator/elevator"
+	"Project/localElevator/elevio"
+	"Project/localElevator/request"
+	"Project/localElevator/timer"
 	"fmt"
 	"time"
 )

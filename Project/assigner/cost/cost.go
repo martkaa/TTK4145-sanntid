@@ -2,8 +2,8 @@ package cost
 
 import (
 	"Project/config"
-	"Project/elevator"
-	"Project/elevio"
+	"Project/localElevator/elevator"
+	"Project/localElevator/elevio"
 )
 
 const TRAVEL_TIME = 10
