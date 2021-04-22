@@ -139,7 +139,7 @@ func assignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEve
 			minElev = elev
 		}
 	}
-	minElev.Requests[order.Floor][order.Button] = config.Order
+	(*minElev).Requests[order.Floor][order.Button] = config.Order
 }
 
 /*
@@ -171,6 +171,9 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 				elev.Requests[floor][button] = config.Complete
 				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 			}
+			if localElev.Requests[floor][button] && elev.Requests[floor][button] != config.Comfirmed {
+				elev.Requests[floor][button] = config.Comfirmed
+			}
 		}
 	}
 }
@@ -191,7 +194,16 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 	if elevators[0].ID != newElevators[0].ID {
 		for _, elev := range elevators {
 			if elev.ID == newElevators[localElevator].ID {
-				*elev = newElevators[localElevator]
+				for floor := range elev.Requests {
+					for button := range elev.Requests[floor] {
+						if !(elev.Requests[floor][button] == config.Comfirmed && newElevators[localElevator].Requests[floor][button] == config.Order) {
+							elev.Requests[floor][button] = newElevators[localElevator].Requests[floor][button]
+						}
+						elev.Floor = newElevators[localElevator].Floor
+						elev.Dir = newElevators[localElevator].Dir
+						elev.Behave = newElevators[localElevator].Behave
+					}
+				}
 			}
 		}
 		for _, newElev := range newElevators {
@@ -200,7 +212,7 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 					for floor := range newElev.Requests {
 						for button := range newElev.Requests[floor] {
 							if newElev.Requests[floor][button] == config.Order {
-								elevators[localElevator].Requests[floor][button] = config.Order
+								(*elevators[localElevator]).Requests[floor][button] = config.Order
 							}
 						}
 					}
@@ -309,7 +321,7 @@ func reassignOrders(elevators []*config.DistributorElevator, errorID string, ch_
 		}
 		for floor := range lostElev.Requests {
 			for button := 0; button < len(lostElev.Requests[floor])-1; button++ {
-				lostElev.Requests[floor][button] = config.None
+				(*lostElev).Requests[floor][button] = config.None
 			}
 		}
 	}
