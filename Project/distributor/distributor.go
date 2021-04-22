@@ -129,8 +129,13 @@ func DistributorFsm(
 						if stringLostID == elev.ID {
 							elev.Behave = config.Unavailable
 						}
+						assigner.ReassignOrders(elevators, ch_newLocalOrder)
+						for floor := range elev.Requests {
+							for button := 0; button < len(elev.Requests[floor])-1; button ++{
+								elev.Requests[floor][button] = config.None
+							}
+						}
 					}
-					assigner.ReassignOrders(elevators, ch_newLocalOrder)
 				}
 			}
 			setHallLights(elevators)
@@ -189,7 +194,7 @@ func copyRequests(elev *config.DistributorElevator, newElev config.DistributorEl
 }
 
 func updateElevators(elevators []*config.DistributorElevator, newElevators []config.DistributorElevator) {
-	if elevators[0].ID != newElevators[0].ID {
+	if elevators[localElevator].ID != newElevators[localElevator].ID {
 		for _, elev := range elevators {
 			if elev.ID == newElevators[localElevator].ID {
 				for floor := range elev.Requests {
@@ -201,6 +206,7 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 						elev.Dir = newElevators[localElevator].Dir
 						elev.Behave = newElevators[localElevator].Behave
 					}
+					if new
 				}
 			}
 		}
@@ -212,8 +218,6 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 							if newElev.Requests[floor][button] == config.Order {
 								(*elevators[localElevator]).Requests[floor][button] = config.Order
 							}
-						} else {
-							elevators[localElevator].Requests[floor][button] = config.None
 						}
 					}
 				}
