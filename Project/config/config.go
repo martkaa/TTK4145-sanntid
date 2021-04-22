@@ -2,7 +2,7 @@ package config
 
 const NumFloors = 4
 const NumButtons = 3
-
+const LocalElevator = 0
 const NoOrder = -1
 
 type Direction int
