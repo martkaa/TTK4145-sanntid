@@ -131,7 +131,7 @@ func DistributorFsm(
 						}
 						assigner.ReassignOrders(elevators, ch_newLocalOrder)
 						for floor := range elev.Requests {
-							for button := 0; button < len(elev.Requests[floor])-1; button ++{
+							for button := 0; button < len(elev.Requests[floor])-1; button++ {
 								elev.Requests[floor][button] = config.None
 							}
 						}
@@ -206,7 +206,6 @@ func updateElevators(elevators []*config.DistributorElevator, newElevators []con
 						elev.Dir = newElevators[localElevator].Dir
 						elev.Behave = newElevators[localElevator].Behave
 					}
-					if new
 				}
 			}
 		}
