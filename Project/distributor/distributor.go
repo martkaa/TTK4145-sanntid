@@ -26,10 +26,10 @@ func broadcast(elevators []*config.DistributorElevator, ch_transmit chan<- []con
 	for _, elev := range elevators {
 		tempElevators = append(tempElevators, *elev)
 	}
-	//for i := 0; i < 5; i++ {
-	ch_transmit <- tempElevators
-	time.Sleep(time.Millisecond * 50)
-	//}
+	for i := 0; i < 5; i++ {
+		ch_transmit <- tempElevators
+		time.Sleep(time.Millisecond * 50)
+	}
 }
 
 func printRequests(elevators []*config.DistributorElevator) {
@@ -60,6 +60,26 @@ func DistributorFsm(
 	thisElevator := new(config.DistributorElevator)
 	*thisElevator = elevatorInit(id)
 	elevators = append(elevators, thisElevator)
+
+	connectTimer := time.NewTimer(time.Duration(3) * time.Second)
+	select {
+	case newElevators := <-ch_msgFromNetwork:
+		for _, elev := range newElevators {
+			if elev.ID == elevators[localElevator].ID {
+				for floor := range elev.Requests {
+					if elev.Requests[floor][config.Cab] == config.Comfirmed ||
+						elev.Requests[floor][config.Cab] == config.Order {
+						ch_newLocalOrder <- elevio.ButtonEvent{
+							Floor:  floor,
+							Button: elevio.ButtonType(int(config.Cab))}
+					}
+				}
+			}
+		}
+		break
+	case <-connectTimer.C:
+		break
+	}
 
 	for {
 		select {
@@ -93,8 +113,8 @@ func DistributorFsm(
 
 		case newElevators := <-ch_msgFromNetwork:
 			updateElevators(elevators, newElevators)
-			//printRequests(elevators)
 			reassignOrders(elevators, ch_newLocalOrder)
+			printRequests(elevators)
 			addNewElevator(&elevators, newElevators)
 			extractNewOrder := comfirmNewOrder(elevators[localElevator])
 			setHallLights(elevators)
@@ -120,7 +140,6 @@ func DistributorFsm(
 			setHallLights(elevators)
 			broadcast(elevators, ch_msgToNetwork)
 		case <-ch_watchdogElevatorStuck:
-			fmt.Println("I am actually stuck")
 			elevators[localElevator].Behave = config.Unavailable
 			broadcast(elevators, ch_msgToNetwork)
 			for floor := range elevators[localElevator].Requests {
@@ -182,7 +201,6 @@ func checkLocalOrderComplete(elev *config.DistributorElevator, localElev elevato
 		for button := range elev.Requests[floor] {
 			if !localElev.Requests[floor][button] && elev.Requests[floor][button] == config.Comfirmed {
 				elev.Requests[floor][button] = config.Complete
-				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 			}
 			if localElev.Requests[floor][button] && elev.Requests[floor][button] != config.Comfirmed && elev.Behave != config.Unavailable {
 				elev.Requests[floor][button] = config.Comfirmed
@@ -279,7 +297,6 @@ func comfirmNewOrder(elev *config.DistributorElevator) config.Request {
 		for button := 0; button < len(elev.Requests[floor]); button++ {
 			if elev.Requests[floor][button] == config.Order {
 				elev.Requests[floor][button] = config.Comfirmed
-				//elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
 				return config.Request{
 					Floor:  floor,
 					Button: config.ButtonType(button)}
@@ -315,7 +332,6 @@ func reassignOrders(elevators []*config.DistributorElevator, ch_newLocalOrder ch
 			}
 		}
 	}
-	fmt.Println("The elevator with lowest ID is ", lowestID)
 	for _, elev := range elevators {
 		if elev.Behave == config.Unavailable {
 			for floor := range elev.Requests {
