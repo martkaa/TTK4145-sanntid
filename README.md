@@ -36,17 +36,17 @@ We wrote our solution program in `GoLang`. We found that the channel feature tog
 
 **Fleeting master**
 
-Every peer on the network stores the states of the other peers of the network in an array, donated elevators. The states containes the floor of an given elevator, the behaviour, the direction, the requests and the ID. The requests of an elevator is a `m x n` matrix containing a number corresponding to the states of the request. An 0 donates no order, 1 donates an order, 2 donates an confirmed order and 3 donates completed order.
+Every peer on the network stores the states of the other peers of the network in an array, donated elevators. The states containes the floor of an given elevator, the behaviour, the direction, the requests and the ID. The requests of an elevator is a `m x n` matrix containing a number corresponding to the states of the request. An 0 donates no order, 1 denotes an order, 2 denotes an confirmed order and 3 denotes completed order.
 
-The elevator that recieves an local order calculates the cost of every elevator based on their states, and thereby delegates the order to the most suitable elevator. This decition is broadcasted to the network. This solution will handle the event of network loss of a node, such that as long as there exists elevators, the orders will always be redelegated to the most suitible node.
+The elevator that recieves an local order calculates the cost of every elevator based on their states, and thereby delegates the order to the most suitable elevator. This decision is broadcasted to the network. This solution will handle the event of network loss of a node, such that as long as there exists elevators, the orders will always be redelegated to the most suitible elevator.
 
 When an order is distributed, it is implicity acknowledged by the other elevators. Network loss will cause the connected elevatoros to reassign the orders of the lost elevator, and the disconnected elevator will go on as a individual elevator.
 
 **UDP broadcast**
 
-The idea to broadcast everything all the time will support our fleeting master, as opposed to a TCP wich requires a hand shake protocol. This means that every elevator knows everyone's states and orders at all times. Backup and restore of orders in case of network loss and power loss is also easy to handle with UDP.
+The idea to broadcast everything using UDP all the time. This will support our fleeting master. This means that every elevator knows everyone's states and orders at all times. Backup and restore of orders in case of network loss and power loss is also easy to handle with UDP, as all elevators knows the last state of every other elevator.
 
-The system perfomed great. For example packet loss is not a problem due to the continous spam of packets. However, there are improvements that could be done to enhance the readability of the program and code. One module tured out to be a "fix-it-all", and could be modifid to enhance the neatness of the system.
+The system perfomed great. For example packet loss is not a problem due to the continous spam of packets. However, there are improvements that could be done to enhance the readability of the program and code. One module tured out to almost be a "fix-it-all", and could be modifed to enhance the neatness of the system.
 
 All in all, we are satisfied with our superduperelevator(s) which is so smooth we (almost) cannot believe it .
 
