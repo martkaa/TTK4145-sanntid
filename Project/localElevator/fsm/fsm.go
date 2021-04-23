@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Final state machine to run the local elevator.
+// Final state machine that runs the local elevator.
 func Fsm(
 	ch_orderChan chan elevio.ButtonEvent,
 	ch_elevatorState chan<- elevator.Elevator,

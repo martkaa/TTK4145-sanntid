@@ -6,7 +6,6 @@ import (
 	"Project/localElevator/elevio"
 )
 
-// Checks for orders above current floor. Returns true if order, false else.
 func RequestsAbove(e elevator.Elevator) bool {
 	for f := e.Floor + 1; f < config.NumFloors; f++ {
 		for btn := range e.Requests[f] {
@@ -18,7 +17,6 @@ func RequestsAbove(e elevator.Elevator) bool {
 	return false
 }
 
-// Checks for orders below current floor. Returns true if order, false else.
 func RequestsBelow(e elevator.Elevator) bool {
 	for f := 0; f < e.Floor; f++ {
 		for btn := range e.Requests[f] {
@@ -30,7 +28,6 @@ func RequestsBelow(e elevator.Elevator) bool {
 	return false
 }
 
-// At arrived floor, clears all orders taken
 func RequestClearAtCurrentFloor(e *elevator.Elevator) {
 	e.Requests[e.Floor][int(elevio.BT_Cab)] = false
 	switch {
@@ -47,7 +44,6 @@ func RequestClearAtCurrentFloor(e *elevator.Elevator) {
 	}
 }
 
-// Check for orders on floor that should be served.
 func RequestShouldStop(e *elevator.Elevator) bool {
 	switch {
 	case e.Dir == elevio.MD_Down:
@@ -79,9 +75,7 @@ func RequestChooseDirection(e *elevator.Elevator) {
 		} else {
 			e.Dir = elevio.MD_Stop
 		}
-
 	}
-
 }
 
 func RequestClearHall(e *elevator.Elevator) {

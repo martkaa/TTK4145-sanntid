@@ -50,6 +50,7 @@ func main() {
 	go elevio.PollObstructionSwitch(ch_obstruction)
 	go elevio.PollButtons(ch_newLocalOrder)
 
+	// Goroutine for local elevator
 	go fsm.Fsm(
 		ch_orderToLocal,
 		ch_newLocalState,
