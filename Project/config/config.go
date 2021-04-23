@@ -2,8 +2,11 @@ package config
 
 const NumFloors = 4
 const NumButtons = 3
+const DoorOpenDuration = 3
+const StateUpdatePeriodMs = 500
+const ElevatorStuckToleranceSec = 5
+const ReconnectTimerSec = 3
 const LocalElevator = 0
-const NoOrder = -1
 
 type Direction int
 

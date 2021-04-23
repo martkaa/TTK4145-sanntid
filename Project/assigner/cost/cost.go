@@ -2,7 +2,6 @@ package cost
 
 import (
 	"Project/config"
-	"Project/localElevator/elevator"
 	"Project/localElevator/elevio"
 )
 
@@ -28,13 +27,13 @@ func Cost(elev *config.DistributorElevator, req elevio.ButtonEvent) int {
 			duration += TRAVEL_TIME / 2
 			e.Floor += int(e.Dir)
 		case config.DoorOpen:
-			duration -= elevator.DoorOpenDuration / 2
+			duration -= config.DoorOpenDuration / 2
 		}
 
 		for {
 			if requestShouldStop(*e) {
 				requestClearAtCurrentFloor(e)
-				duration += elevator.DoorOpenDuration
+				duration += config.DoorOpenDuration
 				requestChooseDirection(e)
 				if e.Dir == config.Stop {
 					return duration

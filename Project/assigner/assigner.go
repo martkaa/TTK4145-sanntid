@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// Checks for unavailable elevators and reassigns eventual orders if an elevator is unavailable.
 func ReassignOrders(elevators []*config.DistributorElevator, ch_newLocalOrder chan elevio.ButtonEvent) {
 	lowestID := 999
 	for _, elev := range elevators {
@@ -35,10 +36,7 @@ func ReassignOrders(elevators []*config.DistributorElevator, ch_newLocalOrder ch
 	}
 }
 
-/*
-	New order from local stuff
-*/
-
+// Assignes new order to the right elevator depending on a cost function.
 func AssignOrder(elevators []*config.DistributorElevator, order elevio.ButtonEvent) {
 	if len(elevators) < 2 || order.Button == elevio.BT_Cab {
 		elevators[config.LocalElevator].Requests[order.Floor][order.Button] = config.Order

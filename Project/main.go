@@ -24,20 +24,39 @@ func main() {
 
 	elevio.Init("localhost:"+port, 4)
 
-	// Channels
+	// Channels for distributor
 	ch_newLocalOrder := make(chan elevio.ButtonEvent, 100)
-	ch_newLocalState := make(chan elevator.Elevator, 100)
 	ch_msgFromNetwork := make(chan []config.DistributorElevator, 100)
 	ch_msgToNetwork := make(chan []config.DistributorElevator, 100)
-	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
 	ch_peerUpdate := make(chan peers.PeerUpdate)
 	ch_peerTxEnable := make(chan bool)
-	ch_watchdogElevatorStuck := make(chan bool)
-	ch_elevStuck := make(chan bool)
-	ch_clearLocalHallOrders := make(chan bool)
 
-	go fsm.Fsm(ch_orderToLocal, ch_newLocalState, ch_clearLocalHallOrders)
+	// Channels for communication between distributor and watchdog
+	ch_petWatchdogStuck := make(chan bool)
+	ch_watchdogStuckBark := make(chan bool)
+
+	// Channels for communication between distributor and local elevator
+	ch_clearLocalHallOrders := make(chan bool)
+	ch_orderToLocal := make(chan elevio.ButtonEvent, 100)
+	ch_newLocalState := make(chan elevator.Elevator, 100)
+
+	// Channels for local elevator
+	ch_arrivedAtFloors := make(chan int)
+	ch_obstruction := make(chan bool, 1)
+	ch_timerDoor := make(chan bool)
+
+	// Goroutines for local elevator
+	go elevio.PollFloorSensor(ch_arrivedAtFloors)
+	go elevio.PollObstructionSwitch(ch_obstruction)
 	go elevio.PollButtons(ch_newLocalOrder)
+
+	go fsm.Fsm(
+		ch_orderToLocal,
+		ch_newLocalState,
+		ch_clearLocalHallOrders,
+		ch_arrivedAtFloors,
+		ch_obstruction,
+		ch_timerDoor)
 
 	// Goroutines for communication
 	go bcast.Transmitter(16568, ch_msgToNetwork)
@@ -45,9 +64,9 @@ func main() {
 	go peers.Transmitter(15647, id, ch_peerTxEnable)
 	go peers.Receiver(15647, ch_peerUpdate)
 
-	go watchdog.WatchdogElevatorStuck(5, ch_elevStuck, ch_watchdogElevatorStuck)
+	go watchdog.Watchdog(config.ElevatorStuckToleranceSec, ch_petWatchdogStuck, ch_watchdogStuckBark)
 
-	go distributor.DistributorFsm(
+	go distributor.Distributor(
 		id,
 		ch_newLocalOrder,
 		ch_newLocalState,
@@ -55,8 +74,8 @@ func main() {
 		ch_msgToNetwork,
 		ch_orderToLocal,
 		ch_peerUpdate,
-		ch_watchdogElevatorStuck,
-		ch_elevStuck,
+		ch_petWatchdogStuck,
+		ch_watchdogStuckBark,
 		ch_clearLocalHallOrders)
 
 	select {}

@@ -1,14 +1,9 @@
 package elevator
 
 import (
+	"Project/config"
 	"Project/localElevator/elevio"
 )
-
-const NumFloors = 4
-
-const NumButtons = 3
-
-const DoorOpenDuration = 3
 
 type Behaviour int
 
@@ -26,10 +21,11 @@ type Elevator struct {
 	TimerCount int
 }
 
+// Initialize the local elevator without orders and in floor 0 in IDLE state.
 func InitElev() Elevator {
 	requests := make([][]bool, 0)
-	for floor := 0; floor < NumFloors; floor++ {
-		requests = append(requests, make([]bool, NumButtons))
+	for floor := 0; floor < config.NumFloors; floor++ {
+		requests = append(requests, make([]bool, config.NumButtons))
 		for button := range requests[floor] {
 			requests[floor][button] = false
 		}
@@ -42,6 +38,7 @@ func InitElev() Elevator {
 		TimerCount: 0}
 }
 
+// Checks for cab orders and updates the lights accordingly.
 func LightsElev(e Elevator) {
 	elevio.SetFloorIndicator(e.Floor)
 	for f := range e.Requests {
